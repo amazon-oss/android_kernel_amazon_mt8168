@@ -119,6 +119,7 @@ void mtk_vcodec_release_dec_pm(struct mtk_vcodec_dev *dev)
 #ifndef FPGA_PWRCLK_API_DISABLE
 	pdev = dev->plat_dev;
 	pm_runtime_disable(&pdev->dev);
+	put_device(dev->pm.larbvdec);
 #endif
 }
 
