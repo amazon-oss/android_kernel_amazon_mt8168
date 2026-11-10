@@ -24,9 +24,6 @@
 #include <linux/of.h>
 #include <linux/reboot.h>
 #include <linux/amzn_keycombo.h>
-#ifdef CONFIG_AMZN_POWEROFF_LOG
-#include <linux/delay.h>
-#endif
 #ifdef CONFIG_AMZN_SIGN_OF_LIFE
 #include <include/amzn_sign_of_life.h>
 #endif
@@ -91,25 +88,6 @@ int unregister_keycombo_notifier(struct notifier_block *nb)
 }
 EXPORT_SYMBOL(unregister_keycombo_notifier);
 
-#ifdef CONFIG_AMZN_POWEROFF_LOG
-static void log_long_press_power_key(void)
-{
-	int rc;
-	char *argv[] = {
-		"/system_ext/bin/crashreport",
-		"long_press_power_key",
-		NULL
-	};
-
-	rc = call_usermodehelper(argv[0], argv, NULL, UMH_WAIT_EXEC);
-	if (rc < 0)
-		pr_err("call /system_ext/bin/crashreport failed, rc = %d\n", rc);
-
-	/*Sleep 6 seconds for saving logs*/
-	msleep(6000);
-}
-#endif /* CONFIG_AMZN_POWEROFF_LOG */
-
 static int get_key_from_label(const char *name)
 {
 	int i;
@@ -136,13 +114,6 @@ static void do_power_off(void *data)
 		keys_cfg->pcombo_data->key_down_delay / 1000);
 	if (!check_pwrkey_status()) {
 		pr_err("power key is released after 6 seconds\n");
-		return;
-	}
-#ifdef CONFIG_AMZN_POWEROFF_LOG
-	log_long_press_power_key();
-#endif
-	if (!check_pwrkey_status()) {
-		pr_err("power key is released after 12 seconds\n");
 		return;
 	}
 
