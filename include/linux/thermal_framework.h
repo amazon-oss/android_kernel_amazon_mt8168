@@ -148,10 +148,6 @@ struct virtual_sensor_thermal_zone {
 	struct thermal_zone_device *tz;
 	struct work_struct therm_work;
 	struct vs_thermal_platform_data *pdata;
-#if defined(CONFIG_AMZN_MINERVA_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG)
-	atomic_t query_count;
-	unsigned int mask;
-#endif
 };
 
 struct cooler_sort_list {

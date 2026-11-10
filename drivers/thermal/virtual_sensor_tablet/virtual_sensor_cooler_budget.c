@@ -20,14 +20,6 @@
 #include <linux/seq_file.h>
 #include <linux/thermal_framework.h>
 
-#ifdef CONFIG_AMAZON_METRICS_LOG
-#include <linux/metricslog.h>
-
-#ifndef THERMO_METRICS_STR_LEN
-#define THERMO_METRICS_STR_LEN 128
-#endif
-#endif
-
 #define DRIVER_NAME "thermal_budget_cooler"
 #define MAXIMUM_CPU_POWER 4600
 
