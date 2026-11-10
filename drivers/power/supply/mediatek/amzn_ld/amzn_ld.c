@@ -31,6 +31,9 @@
 #include "amzn_ld.h"
 #include <mtk_charger_intf.h>
 #include <linux/regulator/consumer.h>
+#ifdef CONFIG_PUBADC_MANAGE
+#include <pubadc_manage.h>
+#endif
 
 static struct liquid *g_liquid;
 
@@ -291,7 +294,11 @@ static int liquid_get_auxadc_value(struct iio_channel *ch)
 		return -EINVAL;
 	}
 
+#ifdef CONFIG_PUBADC_MANAGE
+	ret = pubadc_iio_read_channel(ch, &auxadc_cali_mv, PUBADC_LIQUID);
+#else
 	ret = iio_read_channel_processed(ch, &auxadc_cali_mv);
+#endif
 	if (ret < 0) {
 		pr_err("%s: IIO channel read failed %d\n", __func__, ret);
 		return ret;
@@ -313,6 +320,7 @@ static void liquid_select_detection_switch(struct liquid *liquid,
 		pinctrl_select_state(liquid->ld_pinctrl,
 			 liquid->ld_ctrl1_low);
 		break;
+#ifndef CONFIG_PUBADC_MANAGE
 	case DETECTION_LD:
 		pinctrl_select_state(liquid->ld_pinctrl,
 			 liquid->ld_ctrl2_high);
@@ -321,6 +329,7 @@ static void liquid_select_detection_switch(struct liquid *liquid,
 		pinctrl_select_state(liquid->ld_pinctrl,
 			 liquid->ld_ctrl2_low);
 		break;
+#endif
 	default:
 		break;
 	}
@@ -555,6 +564,7 @@ static int liquid_pinctrl_init(struct platform_device *pdev)
 		goto out;
 	}
 
+#ifndef CONFIG_PUBADC_MANAGE
 	liquid->ld_ctrl2_init = pinctrl_lookup_state(pinctrl, "ldctrl2_init");
 	if (IS_ERR(liquid->ld_ctrl2_init)) {
 		pr_err("%s: can't find ld_ctrl2_init\n", __func__);
@@ -572,6 +582,7 @@ static int liquid_pinctrl_init(struct platform_device *pdev)
 		pr_err("%s: can't find ld_ctrl2_high\n", __func__);
 		goto out;
 	}
+#endif
 
 	liquid->ld_detection1_init = pinctrl_lookup_state(pinctrl,
 		 "lddetection1_init");
@@ -616,7 +627,9 @@ static int liquid_pinctrl_init(struct platform_device *pdev)
 	}
 
 	pinctrl_select_state(liquid->ld_pinctrl, liquid->ld_ctrl1_init);
+#ifndef CONFIG_PUBADC_MANAGE
 	pinctrl_select_state(liquid->ld_pinctrl, liquid->ld_ctrl2_init);
+#endif
 	pinctrl_select_state(liquid->ld_pinctrl, liquid->ld_detection1_init);
 	pinctrl_select_state(liquid->ld_pinctrl, liquid->ld_detection2_init);
 
@@ -694,6 +707,7 @@ static void liquid_vbus_changed(void)
 		&g_liquid->delayed_work, msecs_to_jiffies(WORK_DETECT_VBUS));
 }
 
+#ifndef CONFIG_PUBADC_MANAGE
 static int get_liquid_id(struct platform_device *pdev)
 {
 	int ret = 0;
@@ -725,6 +739,7 @@ static int get_liquid_id(struct platform_device *pdev)
 
 	return 0;
 }
+#endif
 
 static int liquid_dev_event(struct notifier_block *nb,
 	 unsigned long event, void *v)
@@ -739,6 +754,7 @@ static int liquid_dev_event(struct notifier_block *nb,
 	return NOTIFY_DONE;
 }
 
+#ifndef CONFIG_PUBADC_MANAGE
 static bool vsim1_init(struct liquid *liquid, struct device *cdev)
 {
 	int ret;
@@ -759,6 +775,7 @@ static bool vsim1_init(struct liquid *liquid, struct device *cdev)
 	}
 	return true;
 }
+#endif
 
 static int liquid_probe(struct platform_device *pdev)
 {
@@ -774,6 +791,13 @@ static int liquid_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, liquid);
 	mutex_init(&liquid->ld_io_mutex);
 
+#ifdef CONFIG_PUBADC_MANAGE
+	if (!get_pubadc_init_state()) {
+		pr_err("[%s] can not find pubadc_management\n", __func__);
+		ret = -ENODEV;
+		goto err_id;
+	}
+#else
 	ret = get_liquid_id(pdev);
 	if (ret) {
 		ret = -ENODEV;
@@ -784,6 +808,7 @@ static int liquid_probe(struct platform_device *pdev)
 		ret = -ENODEV;
 		goto err_vsim1;
 	}
+#endif
 
 	if (liquid_get_auxadc_channel(pdev)) {
 		ret = -EPROBE_DEFER;
@@ -847,8 +872,10 @@ err_pinctrl:
 err_getcharge:
 err_tcpc:
 err_adcchnnel:
+#ifndef CONFIG_PUBADC_MANAGE
 	regulator_disable(liquid->vsim1_ldo);
 err_vsim1:
+#endif
 err_id:
 	mutex_destroy(&liquid->ld_io_mutex);
 	if (liquid)

@@ -85,6 +85,9 @@
 #include <linux/iio/consumer.h>
 #define ID_VOLT_END -1
 #endif
+#ifdef CONFIG_PUBADC_MANAGE
+#include <pubadc_manage.h>
+#endif
 
 #define DISABLE_LOW_BATTERY_TEMP (-100)
 
@@ -399,7 +402,11 @@ static int get_pin_id_volt(struct iio_channel *chan, int *id_volt)
 		return -EINVAL;
 	}
 
+#ifdef CONFIG_PUBADC_MANAGE
+	ret = pubadc_iio_read_channel(chan, id_volt, PUBADC_BAT_ID);
+#else
 	ret = iio_read_channel_processed(chan, id_volt);
+#endif
 	if (ret < 0) {
 		pr_err("%s: IIO channel read failed %d\n",__func__, ret);
 		return ret;
