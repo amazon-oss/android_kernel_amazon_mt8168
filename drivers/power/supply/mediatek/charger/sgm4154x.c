@@ -24,7 +24,6 @@
 #include <linux/bitops.h>
 #include <linux/math64.h>
 #include <linux/syscore_ops.h>
-#include <mt-plat/battery_metrics.h>
 #include "mtk_charger_intf.h"
 #include "sgm4154x.h"
 
@@ -575,7 +574,6 @@ static int check_fault_register(struct sgm4154x *sgm)
 
 	if (fault_val & SGM4154X_FAULT_BAT_MASK) {
 		pr_err("%s: vbat ovp\n", __func__);
-		bat_metrics_chg_fault(METRICS_FAULT_VBAT_OVP);
 	}
 
 	if (fault_val & SGM4154X_FAULT_CHRG_MASK) {
@@ -589,7 +587,6 @@ static int check_fault_register(struct sgm4154x *sgm)
 			break;
 		case SGM4154X_FAULT_CHRG_TIMER:
 			pr_err("%s: Charge safety timer expired\n", __func__);
-			bat_metrics_chg_fault(METRICS_FAULT_SAFETY_TIMEOUT);
 		default:
 			break;
 		}
@@ -597,7 +594,6 @@ static int check_fault_register(struct sgm4154x *sgm)
 
 	if (fault_val & SGM4154X_FAULT_BOOST_MASK) {
 		pr_err("%s: VBUS overloaded in OTG, or VBUS OVP, or Vbat too low\n", __func__);
-		bat_metrics_chg_fault(METRICS_FAULT_VBUS_OVP);
 	}
 
 	if (fault_val & SGM4154X_FAULT_WDT_MASK) {

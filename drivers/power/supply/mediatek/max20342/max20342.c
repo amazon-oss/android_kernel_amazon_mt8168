@@ -491,35 +491,12 @@ static void max20342_regdump(struct max20342 *max20342)
 
 static void max20342_report_event(struct max20342 *max20342, int event)
 {
-	int duration_sec = 0;
-	struct timespec now_ts;
 	int pre_event = switch_get_state(&max20342->st_switch);
 
 	if (pre_event != event) {
 		switch_set_state(&max20342->st_switch, event);
 		pr_info("[%s] event changed %d ->%d", __func__, pre_event,
 			 event);
-		get_monotonic_boottime(&now_ts);
-
-		if (pre_event == TYPE_DRY)
-			duration_sec = 0;
-		else
-			duration_sec = now_ts.tv_sec - max20342->event_ts.tv_sec;
-#ifdef CONFIG_AMZN_METRICS_LOG
-		max20342_metrics_log("Liquid_Detection", "Liquid_Detection:\
-			def:current_state=%d;CT;1,previous_state=%d;CT;1,\
-			duration_sec=%d;CT;1:NR", event, pre_event, duration_sec);
-#endif
-
-#ifdef CONFIG_AMZN_MINERVA_METRICS_LOG
-		minerva_metrics_log(g_m_buf_max20342, METRICS_BUFF_SIZE_MAX20342,
-				"%s:%s:100:%s,%s,%s,%s,ld_current_state=%d;IN,ld_previous_state=%d;IN,ld_duration_sec=%d;IN:us-east-1",
-				METRICS_LD_GROUP_ID, METRICS_LD_SCHEMA_ID,
-				PREDEFINED_ESSENTIAL_KEY, PREDEFINED_DEVICE_ID_KEY,
-				PREDEFINED_MODEL_KEY, PREDEFINED_TZ_KEY, event, pre_event, duration_sec);
-#endif
-
-		memcpy(&max20342->event_ts, &now_ts, sizeof(struct timespec));
 	} else {
 		if (event == TYPE_DRY)
 			pr_info("[%s] dry\n", __func__);
@@ -1088,7 +1065,6 @@ static int max20342_i2c_probe(struct i2c_client *client,
 		goto err_attr;
 
 	g_max20342 = max20342;
-	get_monotonic_boottime(&max20342->event_ts);
 	wakeup_source_init(&max20342->wake_lock, "max20342");
 	INIT_DELAYED_WORK(&max20342->routine_work, max20342_routine_work);
 	INIT_DELAYED_WORK(&g_max20342->delayed_work, max20342_vbus_detect);

@@ -45,8 +45,6 @@ struct liquid {
 	struct delayed_work routine_work;
 	struct delayed_work delayed_work;
 	struct mutex ld_io_mutex;
-	/* For metrics */
-	struct timespec event_ts;
 
 	struct pinctrl *ld_pinctrl;
 	struct pinctrl_state *ld_ctrl1_init;

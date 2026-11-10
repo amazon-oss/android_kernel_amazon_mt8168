@@ -31,7 +31,6 @@
 #include <mtk_gauge_time_service.h>
 #include <mach/mtk_battery_property.h>
 #include "mtk_battery_internal.h"
-#include <mt-plat/battery_metrics.h>
 
 #ifdef CONFIG_AMZN_SIGN_OF_LIFE
 #include <linux/amzn_sign_of_life.h>
@@ -314,7 +313,6 @@ static int shutdown_event_handler(struct shutdown_controller *sdd)
 				now, sdd->pre_time[SOC_ZERO_PERCENT]);
 			polling++;
 			if (duraction.tv_sec >= SHUTDOWN_TIME) {
-				bat_metrics_critical_shutdown();
 				bm_err("soc zero shutdown\n");
 				mutex_unlock(&sdd->lock);
 				kernel_power_off();
@@ -336,7 +334,6 @@ static int shutdown_event_handler(struct shutdown_controller *sdd)
 				now, sdd->pre_time[UISOC_ONE_PERCENT]);
 			polling++;
 			if (duraction.tv_sec >= SHUTDOWN_TIME) {
-				bat_metrics_critical_shutdown();
 				bm_err("uisoc one shutdown\n");
 				mutex_unlock(&sdd->lock);
 				kernel_power_off();
@@ -411,7 +408,6 @@ static int shutdown_event_handler(struct shutdown_controller *sdd)
 				duraction = timespec_sub(
 					now, sdd->pre_time[LOW_BAT_VOLT]);
 				if (duraction.tv_sec >= SHUTDOWN_TIME) {
-					bat_metrics_critical_shutdown();
 					bm_err("low bat shutdown\n");
 					mutex_unlock(&sdd->lock);
 					kernel_power_off();

@@ -31,11 +31,6 @@
 #include "amzn_ld.h"
 #include <mtk_charger_intf.h>
 #include <linux/regulator/consumer.h>
-#if defined(CONFIG_AMZN_METRICS_LOG) || defined(CONFIG_AMZN_MINERVA_METRICS_LOG)
-#include <linux/amzn_metricslog.h>
-#define METRICS_BUFF_SIZE_LIQUID 512
-static char g_m_buf_liquid[METRICS_BUFF_SIZE_LIQUID];
-#endif
 
 static struct liquid *g_liquid;
 
@@ -198,38 +193,12 @@ static void liquid_delete_attr(struct device *cdev)
 
 static void liquid_report_event(struct liquid *liquid, int event)
 {
-	int duration_sec = 0;
-	struct timespec now_ts;
 	int pre_event = switch_get_state(&liquid->st_switch);
 
 	if (pre_event != event) {
 		switch_set_state(&liquid->st_switch, event);
 		pr_info("[%s] event changed %d ->%d", __func__, pre_event,
 			 event);
-		get_monotonic_boottime(&now_ts);
-
-		if (pre_event == TYPE_DRY)
-			duration_sec = 0;
-		else
-			duration_sec = now_ts.tv_sec - liquid->event_ts.tv_sec;
-#ifdef CONFIG_AMZN_METRICS_LOG
-		memset(g_m_buf_liquid, 0, METRICS_BUFF_SIZE_LIQUID);
-		snprintf(g_m_buf_liquid, sizeof(g_m_buf_liquid),
-				"Liquid_Detection:def:current_state=%d;CT;1,"
-				"previous_state=%d;CT;1,duration_sec=%d;CT;1:NR",
-				event, pre_event, duration_sec);
-		log_to_metrics(ANDROID_LOG_INFO, "Liquid_Detection", g_m_buf_liquid);
-#endif
-
-#ifdef CONFIG_AMZN_MINERVA_METRICS_LOG
-		minerva_metrics_log(g_m_buf_liquid, METRICS_BUFF_SIZE_LIQUID,
-				"%s:%s:100:%s,%s,%s,%s,ld_current_state=%d;IN,"
-				"ld_previous_state=%d;IN,ld_duration_sec=%d;IN:us-east-1",
-				METRICS_LD_GROUP_ID, METRICS_LD_SCHEMA_ID,
-				PREDEFINED_ESSENTIAL_KEY, PREDEFINED_DEVICE_ID_KEY,
-				PREDEFINED_MODEL_KEY, PREDEFINED_TZ_KEY, event, pre_event, duration_sec);
-#endif
-		memcpy(&liquid->event_ts, &now_ts, sizeof(struct timespec));
 	} else {
 		if (event == TYPE_DRY)
 			pr_info("[%s] dry\n", __func__);
@@ -862,7 +831,6 @@ static int liquid_probe(struct platform_device *pdev)
 		goto err_attr;
 
 	g_liquid = liquid;
-	get_monotonic_boottime(&liquid->event_ts);
 	wakeup_source_init(&liquid->wake_lock, "ld");
 	INIT_DELAYED_WORK(&liquid->routine_work, liquid_routine_work);
 	INIT_DELAYED_WORK(&g_liquid->delayed_work, liquid_vbus_detect);

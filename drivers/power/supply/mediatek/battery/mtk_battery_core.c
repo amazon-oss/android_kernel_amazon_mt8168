@@ -85,7 +85,6 @@
 #include <linux/iio/consumer.h>
 #define ID_VOLT_END -1
 #endif
-#include <mt-plat/battery_metrics.h>
 
 #define DISABLE_LOW_BATTERY_TEMP (-100)
 
@@ -3208,11 +3207,6 @@ void fg_daemon_send_data(
 				prcv->idx);
 
 			bm_info("FG_LOG_DATA\n");
-
-			bat_metrics_aging(fg_log_data.gm30_aging_factor,
-					  fg_log_data.gm30_bat_cycle,
-					  fg_log_data.gm30_qmax_t_0ma_tb1);
-
 		}
 		break;
 

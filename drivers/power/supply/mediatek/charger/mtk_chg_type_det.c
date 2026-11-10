@@ -47,7 +47,6 @@
 #include <mach/upmu_hw.h>
 #include <mt-plat/mtk_boot.h>
 #include <mt-plat/charger_type.h>
-#include <mt-plat/battery_metrics.h>
 #include <mt-plat/charger_class.h>
 #include <pmic.h>
 
@@ -233,13 +232,11 @@ static int mt_charger_set_property(struct power_supply *psy,
 		mtk_chg->chg_type = val->intval;
 		g_chr_type = val->intval;
 		pr_info("charge=%d\n",val->intval);
-		bat_metrics_chrdet(mtk_chg->chg_type);
 		break;
 	case POWER_SUPPLY_PROP_CHARGER_TYPE:
 		mtk_chg->chg_type = val->intval;
 		g_chr_type = val->intval;
 		pr_info("charger type=%d\n",val->intval);
-		bat_metrics_chrdet(mtk_chg->chg_type);
 		break;
 	default:
 		return -EINVAL;

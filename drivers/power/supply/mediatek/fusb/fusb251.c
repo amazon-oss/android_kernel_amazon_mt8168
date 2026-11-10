@@ -815,40 +815,11 @@ static void fusb251_regdump(struct fusb251 *fusb251)
 
 static void fusb251_report_event(struct fusb251 *fusb251, int event)
 {
-	int duration_sec = 0;
-	struct timespec now_ts;
 	int pre_event = switch_get_state(&fusb251->st_switch);
 
 	if (pre_event != event) {
 		switch_set_state(&fusb251->st_switch, event);
 		pr_info("%s: event change %d -> %d", __func__, pre_event, event);
-
-		get_monotonic_boottime(&now_ts);
-
-		/*
-		* To avoid duration_sec number overflow on metrics service,
-		* "duration_sec" report 0 when event change from EVENT_DRY.
-		*/
-		if (pre_event == TYPE_DRY)
-			duration_sec = 0;
-		else
-			duration_sec = now_ts.tv_sec - fusb251->event_ts.tv_sec;
-#ifdef CONFIG_AMZN_METRICS_LOG
-		fusb251_metrics_log("LiquidDetection",
-				"LiquidDetection:def:ld_current_state=%d;CT;1,ld_previous_state=%d;CT;1,ld_duration_sec=%d;CT;1:NR",
-				event, pre_event, duration_sec);
-#endif
-
-#ifdef CONFIG_AMZN_MINERVA_METRICS_LOG
-		minerva_metrics_log(g_m_buf, METRICS_BUFF_SIZE_FUSB251,
-				"%s:%s:100:%s,%s,%s,%s,ld_current_state=%d;IN,ld_previous_state=%d;IN,"
-				"ld_duration_sec=%d;IN:us-east-1",
-				METRICS_LD_GROUP_ID, METRICS_LD_SCHEMA_ID,
-				PREDEFINED_ESSENTIAL_KEY, PREDEFINED_DEVICE_ID_KEY,
-				PREDEFINED_MODEL_KEY, PREDEFINED_TZ_KEY, event, pre_event, duration_sec);
-#endif
-
-		memcpy(&fusb251->event_ts, &now_ts, sizeof(struct timespec));
 	} else {
 		if (event == TYPE_DRY)
 			pr_info("%s: dry\n", __func__);
@@ -1264,7 +1235,6 @@ static int fusb251_i2c_probe(struct i2c_client *client,
 		goto err_attr;
 
 	g_fusb251 = fusb251;
-	get_monotonic_boottime(&fusb251->event_ts);
 	wakeup_source_init(&fusb251->wake_lock, "fusb251");
 	INIT_DELAYED_WORK(&fusb251->routine_work, fusb251_routine_work);
 	INIT_DELAYED_WORK(&g_fusb251->delayed_work, fusb251_vbus_detect);

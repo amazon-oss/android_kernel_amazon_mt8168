@@ -63,7 +63,6 @@
 
 #include <mt-plat/mtk_boot.h>
 #include <mt-plat/charger_class.h>
-#include <mt-plat/battery_metrics.h>
 /* #include <musb_core.h> */ /* FIXME */
 #include "mtk_charger_intf.h"
 #include "mtk_switch_charging.h"
@@ -210,7 +209,6 @@ static int adapter_power_detection(struct charger_manager *info)
 	}
 
 done:
-	bat_metrics_adapter_power(det->type, _uA_to_mA(aicl_ua));
 	pr_info("%s: detect %s adapter\n", __func__, category_text[det->type]);
 	return 0;
 
@@ -269,9 +267,6 @@ static void check_invalid_charger(struct charger_manager *info)
 			__func__, info->sw_aicl.aicl_vbus_valid);
 		switch_set_state(&info->invalid_charger, 1);
 	}
-	if (switch_get_state(&info->invalid_charger))
-		bat_metrics_invalid_charger();
-
 	info->invalid_charger_det_done = true;
 
 	charger_dev_set_charging_current(info->chg1_dev, bak_cur);
@@ -335,13 +330,11 @@ static int ap15_charger_detection(struct charger_manager *info)
 	if (iusb >= info->sw_aicl.aicl_input_current_min) {
 		info->sw_aicl.iusb_ua = ADAPTER_INPUT_CURRENT_9W_UA;
 		info->sw_aicl.ibat_ua = current_max;
-		bat_metrics_adapter_power(ADAPTER_9W, _uA_to_mA(iusb));
 		pr_info("%s: AP15(9W) adapter detected, update setting %d %d\n",
 			__func__, info->sw_aicl.iusb_ua, info->sw_aicl.ibat_ua);
 	} else {
 		info->sw_aicl.iusb_ua = ADAPTER_INPUT_CURRENT_5W_UA;
 		info->sw_aicl.ibat_ua = ADAPTER_IBAT_CURRENT_5W_UA;
-		bat_metrics_adapter_power(ADAPTER_5W, _uA_to_mA(iusb));
 		pr_info("%s: aicl: AP15(9W) adapter not detected =%d,=%d\n",
 			__func__, info->sw_aicl.iusb_ua,
 				info->sw_aicl.ibat_ua);
@@ -1057,7 +1050,6 @@ int charger_dev_event(struct notifier_block *nb, unsigned long event, void *v)
 	case CHARGER_DEV_NOTIFY_SAFETY_TIMEOUT:
 		info->safety_timeout = true;
 		chr_err("%s: safety timer timeout\n", __func__);
-		bat_metrics_chg_fault(METRICS_FAULT_SAFETY_TIMEOUT);
 
 		/* If sw safety timer timeout, do not wake up charger thread */
 		if (info->enable_sw_safety_timer)
@@ -1066,7 +1058,6 @@ int charger_dev_event(struct notifier_block *nb, unsigned long event, void *v)
 	case CHARGER_DEV_NOTIFY_VBUS_OVP:
 		info->vbusov_stat = data->vbusov_stat;
 		chr_err("%s: vbus ovp = %d\n", __func__, info->vbusov_stat);
-		bat_metrics_chg_fault(METRICS_FAULT_VBUS_OVP);
 		break;
 	default:
 		return NOTIFY_DONE;

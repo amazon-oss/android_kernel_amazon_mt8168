@@ -34,7 +34,6 @@
 #include <linux/math64.h>
 #include <linux/syscore_ops.h>
 #include <mt-plat/charger_type.h>
-#include <mt-plat/battery_metrics.h>
 
 #include "mtk_charger_intf.h"
 #include "bq2560x_reg.h"
@@ -744,15 +743,12 @@ static int check_fault_register(struct bq2560x *bq)
 	switch (fault_val) {
 	case REG09_FAULT_BOOST_MASK:
 		pr_err("%s: vbus ovp\n", __func__);
-		bat_metrics_chg_fault(METRICS_FAULT_VBUS_OVP);
 		break;
 	case REG09_FAULT_BAT_MASK:
 		pr_err("%s: vbat ovp\n", __func__);
-		bat_metrics_chg_fault(METRICS_FAULT_VBAT_OVP);
 		break;
 	case REG09_FAULT_CHRG_MASK:
 		pr_err("%s: safety timer timeout\n", __func__);
-		bat_metrics_chg_fault(METRICS_FAULT_SAFETY_TIMEOUT);
 		break;
 	case REG09_FAULT_WDT_MASK:
 		pr_err("%s: Watchdog timer expiration\n", __func__);

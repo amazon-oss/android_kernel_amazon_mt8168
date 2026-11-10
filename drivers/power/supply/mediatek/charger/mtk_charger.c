@@ -72,7 +72,6 @@
 /* #include <musb_core.h> */ /* FIXME */
 #include <pmic.h>
 #include <mtk_gauge_time_service.h>
-#include <mt-plat/battery_metrics.h>
 #include <mtk_battery_internal.h>
 #include "mtk_charger_intf.h"
 #include "mtk_charger_init.h"
@@ -1138,17 +1137,14 @@ static ssize_t store_bcm_flag(struct device *dev,
 
 	if (!strncmp(buf, "charge_timer", strlen("charge_timer"))) {
 		pinfo->bcm_flag = BCM_FLAG_CHARGE_TIMER;
-		bat_metrics_bcm_flag(BCM_FLAG_CHARGE_TIMER);
 		return size;
 	}
 	if (!strncmp(buf, "secondary_thermal", strlen("secondary_thermal"))) {
 		pinfo->bcm_flag = BCM_FLAG_SECONDARY_THERMAL;
-		bat_metrics_bcm_flag(BCM_FLAG_SECONDARY_THERMAL);
 		return size;
 	}
 	if (!strncmp(buf, "0", strlen("0"))) {
 		pinfo->bcm_flag = BCM_FLAG_NONE;
-		bat_metrics_bcm_flag(pinfo->bcm_flag);
 		return size;
 	}
 
@@ -1447,7 +1443,6 @@ static void check_dpm_eoc_state(struct charger_manager *info)
 			__func__, info->soc_exit_dpm_eoc,
 			info->cv_enter_dpm_eoc / 1000, info->dpm_state_count);
 		info->dpm_state_count = 0;
-		bat_metrics_dpm_eoc_mode(cur_cv);
 	}
 
 	return;
@@ -1623,11 +1618,9 @@ static void charger_top_off_mode(struct charger_manager *info)
 	if (info->top_off_mode_enable) {
 		info->custom_charging_cv = top_off_cv;
 		fg_update_difference_full_cv(info->top_off_difference_full_cv);
-		bat_metrics_top_off_mode(true);
 	} else {
 		info->custom_charging_cv = -1;
 		fg_update_difference_full_cv(info->normal_difference_full_cv);
-		bat_metrics_top_off_mode(false);
 	}
 }
 

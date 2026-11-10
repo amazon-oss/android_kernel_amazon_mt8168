@@ -20,9 +20,6 @@
 #include <linux/list.h>
 #include <linux/workqueue.h>
 #include <linux/switch.h>
-#if defined(CONFIG_AMZN_METRICS_LOG) || defined(CONFIG_AMZN_MINERVA_METRICS_LOG)
-#include <linux/amzn_metricslog.h>
-#endif
 
 #define FUSB251_DEVICE_ID       0x80
 
@@ -146,9 +143,6 @@ struct fusb251 {
 	struct charger_device *chg1_dev;
 	struct notifier_block chg1_nb;
 
-	/* For metrics */
-	struct timespec event_ts;
-
 	unsigned char status_ovp_cc;
 	unsigned char status_ovp_sbu;
 	unsigned char mos_status_sbu1;
@@ -169,21 +163,6 @@ int sbuft_det_MV_table[] = {100, 200, 300, 400, 500, 600,
 /* Resistance table for moisture detection */
 int mos_det_R_table[] = {17, 36, 56, 80, 107, 137, 172, 213,
 	262, 320, 391, 480, 594, 747, 960, 1280};
-
-/* For metrics */
-#ifdef CONFIG_AMZN_SIGN_OF_LIFE
-#define METRICS_BUFF_SIZE_FUSB251 512
-char g_m_buf[METRICS_BUFF_SIZE_FUSB251];
-
-#define fusb251_metrics_log(domain, fmt, ...)			\
-do {								\
-	memset(g_m_buf, 0, METRICS_BUFF_SIZE_FUSB251);		\
-	snprintf(g_m_buf, sizeof(g_m_buf), fmt, ##__VA_ARGS__);	\
-	log_to_metrics(ANDROID_LOG_INFO, domain, g_m_buf);	\
-} while (0)
-#else
-static inline void fusb251_metrics_log(void) {}
-#endif
 
 #define MAX_VOLTAGE             800
 #define MAX_RESISTANCE          1280
