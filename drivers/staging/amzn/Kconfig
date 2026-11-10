@@ -62,13 +62,6 @@ config AMZN_IDME
 	  Select Y here to enable IDME support to read the data
 	  via userspace (i.e. /proc/idme/* entries)
 
-config AMZN_DRV_TEST
-	tristate "Amazon common BSP driver test module"
-	depends on AMZN_METRICS_LOG && AMZN_SIGN_OF_LIFE && AMZN_IDME
-	default n
-	---help---
-		Enable Amazon Common BSP test module
-
 source "drivers/staging/amzn/dspframework/Kconfig"
 
 endif # if AMZN

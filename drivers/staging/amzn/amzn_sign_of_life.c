@@ -67,88 +67,6 @@ static int search_lcr_table(const struct sign_of_life_reason_data *table,
 	return 0;
 }
 
-#ifdef CONFIG_AMZN_DRV_TEST
-int clear_life_cycle_reason(void)
-{
-	if (!p_dev_sol) {
-		pr_err("the life cycle driver is not initialized\n");
-		return -1;
-	}
-
-	if (!p_dev_sol->sol_ops.lcr_reset) {
-		pr_err("lcr_reset is not initialized\n");
-		return -1;
-	}
-
-	p_dev_sol->sol_ops.lcr_reset();
-
-	return 0;
-}
-
-int read_life_cycle_reason(life_reason_type type)
-{
-	int index = -1;
-	int ret = 0;
-	life_cycle_reason_t life_reason = LIFE_CYCLE_NOT_AVAILABLE;
-	int table_num = ARRAY_SIZE(lcr_data);
-
-	if (!p_dev_sol) {
-		pr_err("the life cycle driver is not initialized\n");
-		return -1;
-	}
-
-	switch (type) {
-		case BOOT:
-			if (!(p_dev_sol->sol_ops.read_boot_reason)) {
-				pr_err("no platform supported\n");
-				return -1;
-			}
-			ret = p_dev_sol->sol_ops.read_boot_reason(&life_reason);
-			break;
-		case SHUTDOWN:
-			if (!(p_dev_sol->sol_ops.read_shutdown_reason)) {
-				pr_err("no platform supported\n");
-				return -1;
-			}
-			ret = p_dev_sol->sol_ops.read_shutdown_reason(&life_reason);
-			break;
-		case THERMAL_SHUTDOWN:
-			if (!(p_dev_sol->sol_ops.read_thermal_shutdown_reason)) {
-				pr_err("no platform supported\n");
-				return -1;
-			}
-			ret = p_dev_sol->sol_ops.read_thermal_shutdown_reason(&life_reason);
-			break;
-		case SPECIAL:
-			if (!(p_dev_sol->sol_ops.read_special_mode)) {
-				pr_err("no platform supported\n");
-				return -1;
-			}
-			ret = p_dev_sol->sol_ops.read_special_mode(&life_reason);
-			break;
-		default:
-			pr_err("no platform supported\n");
-			return -1;
-	}
-
-	if (ret < 0) {
-		pr_err("life_reaosn NOT find!\n");
-		return -1;
-	}
-
-	index = search_lcr_table(lcr_data, table_num,
-				life_reason);
-	if (!index) {
-		pr_err("life cycle reaosn NOT find!\n");
-		return -1;
-	}
-
-	return index;
-}
-
-extern void read_bootup_life_reason(void);
-#endif
-
 static int life_cycle_reason_lookup(void)
 {
 	life_cycle_reason_t boot_reason = LIFE_CYCLE_NOT_AVAILABLE;
@@ -444,10 +362,6 @@ static int __init dev_sol_init(void)
 	 *		 */
 	if (!life_cycle_reason_lookup())
 		pr_warn("didn't find the right lcr reason for previous booting\n");
-
-#ifdef CONFIG_AMZN_DRV_TEST
-	read_bootup_life_reason();
-#endif
 
 	/* Judge charger mode in case of not using androidboot.mode */
 	if (is_charging_mode())

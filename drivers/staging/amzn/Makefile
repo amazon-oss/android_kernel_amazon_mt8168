@@ -19,5 +19,4 @@ endif
 obj-$(CONFIG_AMZN_METRICS_LOG_TEST) += amzn_logger_test.o
 obj-$(CONFIG_AMZN_INPUT_KEYCOMBO)	+= amzn_keycombo.o
 obj-$(CONFIG_AMZN_IDME) 		+= amzn_idme.o
-obj-$(CONFIG_AMZN_DRV_TEST) 		+= amzn_drv_test.o
 obj-$(CONFIG_AMZN_DSP_FRAMEWORK)	+= dspframework/

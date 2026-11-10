@@ -95,10 +95,4 @@ typedef struct sign_of_life_ops {
         int (*lcr_reset)(void);
 } sign_of_life_ops;
 
-#ifdef CONFIG_AMZN_DRV_TEST
-extern life_cycle_reason_t lcr_boot;
-extern int read_life_cycle_reason(life_reason_type type);
-extern int clear_life_cycle_reason(void);
-#endif
-
 #endif
