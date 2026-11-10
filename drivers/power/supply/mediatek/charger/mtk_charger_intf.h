@@ -428,6 +428,11 @@ struct charger_manager {
 	/* top-off mode */
 	int custom_charging_cv;
 	int top_off_mode_cv;
+	struct timespec chr_plug_in_time;
+	__kernel_time_t top_off_mode_time_threshold;
+	int vbat_exit_top_off_mode;
+	bool enable_top_off_mode_debounce;
+	__kernel_time_t top_off_mode_keep_time;
 #ifdef CONFIG_MTK_USE_AGING_ZCV
 	int top_off_mode_cv_aging1;
 	int top_off_mode_cv_aging2;

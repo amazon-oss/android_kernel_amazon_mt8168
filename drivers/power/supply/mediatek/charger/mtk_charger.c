@@ -84,6 +84,7 @@ static DEFINE_MUTEX(consumer_mutex);
 #define DEFAULT_TOP_OFF_CHARGING_CV_AGING1      4200000
 #define DEFAULT_TOP_OFF_CHARGING_CV_AGING2      0
 #define DEFAULT_DIFFERENCE_FULL_CV	500 /* 5% */
+#define DEFAULT_TOP_OFF_MODE_KEEP_TIME		(3600)
 
 #define DEFAULT_BAT_EOC_PROTECT_RESET_TIME	60	/* 60s */
 #define DEFAULT_BAT_SOC_EXIT_EOC		96	/* 96% */
@@ -1565,6 +1566,60 @@ static ssize_t store_top_off_mode(struct device *dev,
 static DEVICE_ATTR(top_off_mode, 0660, show_top_off_mode,
 		   store_top_off_mode);
 
+/* check conditions to reset top-off mode. */
+static bool check_top_off_mode_reset_cond(struct charger_manager *info)
+{
+	if (info->enable_top_off_mode_debounce == true) {
+		int vbat;
+
+		vbat = battery_get_bat_voltage();
+		if ((info->disconnect_duration >= info->top_off_mode_keep_time)
+			|| (info->vbat_exit_top_off_mode > 0 &&
+			vbat < info->vbat_exit_top_off_mode))
+			return true;
+		else
+			return false;
+	}
+	return true;
+}
+
+static void check_top_off_mode(struct charger_manager *info,
+	bool reset)
+{
+	struct timespec now_time;
+	__kernel_time_t total_time_plug_in;
+
+#ifdef CONFIG_MTK_USE_AGING_ZCV
+	if (gm.use_aging_zcv) {
+		if (info->custom_charging_cv != -1) {
+			info->custom_charging_cv = -1;
+			fg_update_difference_full_cv(info->normal_difference_full_cv);
+		}
+		return;
+	}
+#endif
+
+	if (!reset) {
+		get_monotonic_boottime(&now_time);
+		total_time_plug_in =
+			now_time.tv_sec - info->chr_plug_in_time.tv_sec;
+		pr_info("total_time_plug_in = %ld\n", total_time_plug_in);
+		if (total_time_plug_in > info->top_off_mode_time_threshold ||
+			info->top_off_mode_enable) {
+			info->custom_charging_cv = info->top_off_mode_cv;
+			fg_update_difference_full_cv(info->top_off_difference_full_cv);
+		} else {
+			info->custom_charging_cv = -1;
+			fg_update_difference_full_cv(info->normal_difference_full_cv);
+		}
+	} else if (check_top_off_mode_reset_cond(info)) {
+		chr_err("%s: Reset top-off mode state\n", __func__);
+		get_monotonic_boottime(&info->chr_plug_in_time);
+		info->custom_charging_cv = -1;
+		fg_update_difference_full_cv(info->normal_difference_full_cv);
+	}
+}
+
 static bool mtk_is_charger_on(struct charger_manager *info)
 {
 	enum charger_type chr_type;
@@ -1576,7 +1631,18 @@ static bool mtk_is_charger_on(struct charger_manager *info)
 	} else {
 		if (info->chr_type == CHARGER_UNKNOWN) {
 			mtk_charger_plug_in(info, chr_type);
+			if (info->top_off_mode_time_threshold)
+				check_top_off_mode(info, true);
 		} else {
+			if (info->top_off_mode_time_threshold) {
+				int vbat = battery_get_bat_voltage();
+
+				if (info->vbat_exit_top_off_mode > 0 &&
+					vbat < info->vbat_exit_top_off_mode)
+					check_top_off_mode(info, true);
+				else
+					check_top_off_mode(info, false);
+			}
 			info->chr_type = chr_type;
 		}
 	}
@@ -2141,7 +2207,8 @@ static int charger_routine_thread(void *arg)
 		check_battery_exist(info);
 		check_dpm_eoc_state(info);
 		charger_check_status(info);
-		charger_top_off_mode(info);
+		if (!info->top_off_mode_time_threshold)
+			charger_top_off_mode(info);
 		kpoc_power_off_check(info);
 
 		if (is_disable_charger() == false) {
@@ -3053,6 +3120,33 @@ static int mtk_charger_parse_dt(struct charger_manager *info,
 		info->data.max_charging_time = MAX_CHARGING_TIME;
 	}
 
+	if (of_property_read_u32(np, "top_off_mode_time_threshold", &val) >= 0) {
+		info->top_off_mode_time_threshold = val;
+		chr_debug("%s: top_off_mode_time_threshold: %ld\n",
+			__func__, info->top_off_mode_time_threshold);
+	} else {
+		info->top_off_mode_time_threshold = 0;
+	}
+
+	info->enable_top_off_mode_debounce = of_property_read_bool(np,
+		"enable_top_off_mode_debounce");
+
+	if (of_property_read_u32(np, "top_off_mode_keep_time", &val) >= 0) {
+		info->top_off_mode_keep_time = val;
+		chr_debug("%s: top_off_mode_keep_time: %ld\n",
+			__func__, info->top_off_mode_keep_time);
+	} else {
+		info->top_off_mode_keep_time = DEFAULT_TOP_OFF_MODE_KEEP_TIME;
+	}
+
+	if (of_property_read_u32(np, "vbat_exit_top_off_mode", &val) >= 0) {
+		info->vbat_exit_top_off_mode = val;
+		chr_debug("%s: vbat_exit_top_off_mode: %d\n",
+			__func__, info->vbat_exit_top_off_mode);
+	} else {
+		info->vbat_exit_top_off_mode = 0;
+	}
+
 	if (of_property_read_u32(np, "top_off_mode_cv", &val) >= 0) {
 		info->top_off_mode_cv = val;
 		chr_debug("%s: top_off_mode_cv: %d\n",
@@ -3771,6 +3865,10 @@ static int mtk_charger_probe(struct platform_device *pdev)
 	info->top_off_mode_enable = 0;
 
 	info->disconnect_time.tv_sec = 0 - info->bat_eoc_protect_reset_time;
+	if (info->top_off_mode_time_threshold)
+		info->disconnect_time.tv_sec = 0 -
+			max(info->top_off_mode_keep_time,
+			    info->bat_eoc_protect_reset_time);
 
 	info->sw_jeita.error_recovery_flag = true;
 	info->sw_jeita.sm = TEMP_T2_TO_T3;
