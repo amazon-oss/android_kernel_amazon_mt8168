@@ -1199,6 +1199,10 @@ ROOT_NODE {
 };
 /* CONSYS end */
 
+&mt_charger {
+	extcon = <&extcon_usb>;
+};
+
 &pio {
 	pinctrl-names = "default";
 
