@@ -28,6 +28,9 @@
 #include <linux/console.h>
 #include <linux/bug.h>
 #include <linux/ratelimit.h>
+#ifdef CONFIG_AMZN_SIGN_OF_LIFE
+#include <linux/amzn_sign_of_life.h>
+#endif
 
 #define PANIC_TIMER_STEP 100
 #define PANIC_BLINK_SPD 18
@@ -175,6 +178,11 @@ void panic(const char *fmt, ...)
 	vsnprintf(buf, sizeof(buf), fmt, args);
 	va_end(args);
 	pr_emerg("Kernel panic - not syncing: %s\n", buf);
+
+#ifdef CONFIG_AMZN_SIGN_OF_LIFE
+	life_cycle_set_boot_reason(WARMBOOT_BY_KERNEL_PANIC);
+#endif
+
 #ifdef CONFIG_DEBUG_BUGVERBOSE
 	/*
 	 * Avoid nested stack-dumping if a panic occurs during oops processing

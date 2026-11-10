@@ -35,6 +35,8 @@
 
 #include "power.h"
 
+#define MTK_SOLUTION 1
+
 const char * const pm_labels[] = {
 	[PM_SUSPEND_TO_IDLE] = "freeze",
 	[PM_SUSPEND_STANDBY] = "standby",
@@ -63,6 +65,10 @@ static DECLARE_WAIT_QUEUE_HEAD(s2idle_wait_head);
 enum s2idle_states __read_mostly s2idle_state;
 static DEFINE_RAW_SPINLOCK(s2idle_lock);
 
+#if AMZN_MODIFICATION
+// Save if the device resumes from a suspend state in which all CPU have shut down.
+static bool resume_from_machine_suspend;
+#endif
 void s2idle_set_ops(const struct platform_s2idle_ops *ops)
 {
 	lock_system_sleep();
@@ -348,6 +354,10 @@ static int suspend_prepare(suspend_state_t state)
 	if (!sleep_state_supported(state))
 		return -EPERM;
 
+#if AMZN_MODIFICATION
+	resume_from_machine_suspend = false;
+#endif
+
 	pm_prepare_console();
 
 	error = __pm_notifier_call_chain(PM_SUSPEND_PREPARE, -1, &nr_calls);
@@ -450,6 +460,12 @@ static int suspend_enter(suspend_state_t state, bool *wakeup)
 			error = suspend_ops->enter(state);
 			trace_suspend_resume(TPS("machine_suspend"),
 				state, false);
+#if AMZN_MODIFICATION
+			if (!error)
+				resume_from_machine_suspend = true;
+#endif
+
+			pr_notice("[METRICS_RESUME] Device suspend exit\n");
 		} else if (*wakeup) {
 			error = -EBUSY;
 		}
@@ -543,6 +559,54 @@ static void suspend_finish(void)
 	pm_restore_console();
 }
 
+#if MTK_SOLUTION
+
+#define SYS_SYNC_TIMEOUT 2000
+static int sys_sync_ongoing;
+static DECLARE_WAIT_QUEUE_HEAD(sys_sync_wq);
+
+static void suspend_sys_sync(struct work_struct *work);
+static struct workqueue_struct *suspend_sys_sync_work_queue;
+DECLARE_WORK(suspend_sys_sync_work, suspend_sys_sync);
+
+static void suspend_sys_sync(struct work_struct *work)
+{
+	pr_debug("++\n");
+	sys_sync();
+	sys_sync_ongoing = 0;
+	pr_debug("--\n");
+	wake_up(&sys_sync_wq);
+}
+
+int suspend_syssync_enqueue(void)
+{
+	if (suspend_sys_sync_work_queue == NULL) {
+		suspend_sys_sync_work_queue =
+			create_singlethread_workqueue("fs_suspend_syssync");
+		if (suspend_sys_sync_work_queue == NULL) {
+			pr_err("fs_suspend_syssync workqueue create failed\n");
+			return -EINVAL;
+		}
+	}
+
+	wait_event_timeout(sys_sync_wq, !sys_sync_ongoing,
+			   msecs_to_jiffies(SYS_SYNC_TIMEOUT));
+
+	if (!sys_sync_ongoing) {
+		sys_sync_ongoing = 1;
+		queue_work(suspend_sys_sync_work_queue, &suspend_sys_sync_work);
+		wait_event_timeout(sys_sync_wq, !sys_sync_ongoing,
+				   msecs_to_jiffies(SYS_SYNC_TIMEOUT));
+		if (!sys_sync_ongoing)
+			return 0;
+		else
+			return -EBUSY;
+	} else
+		return -EBUSY;
+}
+
+#endif
+
 /**
  * enter_state - Do common work needed to enter system sleep state.
  * @state: System sleep state to enter.
@@ -575,7 +639,15 @@ static int enter_state(suspend_state_t state)
 #ifndef CONFIG_SUSPEND_SKIP_SYNC
 	trace_suspend_resume(TPS("sync_filesystems"), 0, true);
 	pr_info("Syncing filesystems ... ");
+#if MTK_SOLUTION
+	error = suspend_syssync_enqueue();
+	if (error) {
+		pr_err("sys_sync timeout.\n");
+		goto Unlock;
+	}
+#else
 	sys_sync();
+#endif
 	pr_cont("done.\n");
 	trace_suspend_resume(TPS("sync_filesystems"), 0, false);
 #endif
@@ -630,3 +702,24 @@ int pm_suspend(suspend_state_t state)
 	return error;
 }
 EXPORT_SYMBOL(pm_suspend);
+
+#if AMZN_MODIFICATION
+/**
+ * pm_resume_from_machine_suspend - Externally visible function for query
+ * of whether a resume comes from a machine level suspend.
+ * Some device drivers or other kernel entities may want to do something if
+ * the system resumes from a non-aborted suspend (machine level suspend).
+ * Any kernel entities should use combination of this function and its resume
+ * callback to determine if the system resumes from machine level suspend.
+ * Fox example: if a device driver wants to know if the system resumes from
+ * machine level suspend, it should do either of them:
+ * 1. set a flag in its suspend callback, check the flag as well
+ *    as result of this function, then clear the flag.
+ * 2. check result of this function in its resume callback.
+ */
+bool pm_resume_from_machine_suspend(void)
+{
+	return resume_from_machine_suspend;
+}
+EXPORT_SYMBOL(pm_resume_from_machine_suspend);
+#endif
