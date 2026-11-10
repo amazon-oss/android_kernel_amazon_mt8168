@@ -192,8 +192,6 @@ int tcpci_set_cc(struct tcpc_device *tcpc, int pull)
 
 int tcpci_set_mode(struct tcpc_device *tcpc, int mode)
 {
-	PD_BUG_ON(tcpc->ops->set_mode == NULL);
-
 	TCPC_INFO("mode = %d \n", mode);
 	if (tcpc->ops->set_mode)
 		return tcpc->ops->set_mode(tcpc, mode);
