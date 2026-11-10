@@ -13,10 +13,6 @@
 
 obj-$(CONFIG_AMZN_SIGN_OF_LIFE) += amzn_sign_of_life.o
 obj-$(CONFIG_AMZN_SIGN_OF_LIFE_RTC) += amzn_sign_of_life_rtc_impl.o
-ifeq ($(or $(strip $(CONFIG_AMZN_METRICS_LOG)), $(strip $(CONFIG_AMZN_MINERVA_METRICS_LOG))),y)
-	obj-y += amzn_logger.o
-endif
-obj-$(CONFIG_AMZN_METRICS_LOG_TEST) += amzn_logger_test.o
 obj-$(CONFIG_AMZN_INPUT_KEYCOMBO)	+= amzn_keycombo.o
 obj-$(CONFIG_AMZN_IDME) 		+= amzn_idme.o
 obj-$(CONFIG_AMZN_DSP_FRAMEWORK)	+= dspframework/
