@@ -721,6 +721,7 @@ static void mtk_register_power_domains(struct platform_device *pdev,
 	for (i = 0; i < num; i++) {
 		struct scp_domain *scpd = &scp->domains[i];
 		struct generic_pm_domain *genpd = &scpd->genpd;
+		bool on;
 
 		if (MTK_SCPD_CAPS(scpd, MTK_SCPD_KEEP_DEFAULT_OFF)) {
 			if (scpsys_domain_is_on(scpd)) {
@@ -736,9 +737,9 @@ static void mtk_register_power_domains(struct platform_device *pdev,
 		 * software.  The unused domains will be switched off during
 		 * late_init time.
 		 */
-			genpd->power_on(genpd);
+			on = !WARN_ON(genpd->power_on(genpd) < 0);
 
-			pm_genpd_init(genpd, NULL, false);
+			pm_genpd_init(genpd, NULL, !on);
 		}
 	}
 
