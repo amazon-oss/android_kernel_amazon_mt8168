@@ -64,4 +64,6 @@ static inline int in_entry_text(unsigned long ptr)
 	return ptr >= (unsigned long)&__entry_text_start &&
 	       ptr < (unsigned long)&__entry_text_end;
 }
+
+void dump_instr(const char *lvl, struct pt_regs *regs);
 #endif

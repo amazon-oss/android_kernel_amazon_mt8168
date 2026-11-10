@@ -43,6 +43,8 @@ struct thread_info {
 	u64			ttbr0;		/* saved TTBR0_EL1 */
 #endif
 	int			preempt_count;	/* 0 => preemptable, <0 => bug */
+	void			*regs_on_excp;	/* aee */
+	int			cpu_excp;	/* aee */
 #ifdef CONFIG_SHADOW_CALL_STACK
 	void			*shadow_call_stack;
 #endif
@@ -52,6 +54,7 @@ struct thread_info {
 {									\
 	.preempt_count	= INIT_PREEMPT_COUNT,				\
 	.addr_limit	= KERNEL_DS,					\
+	.cpu_excp = 0,	/* aee */					\
 }
 
 #define init_stack		(init_thread_union.stack)
