@@ -810,9 +810,6 @@ struct dbmdx_private {
 	struct chip_interface		**interfaces;
 	enum dbmdx_bus_interface	*interface_types;
 	unsigned int			nr_of_interfaces;
-	bool fgMetricLogPrint;
-	ktime_t  StreamOpenTime;
-	int dspStreamDuration;
 };
 
 /*

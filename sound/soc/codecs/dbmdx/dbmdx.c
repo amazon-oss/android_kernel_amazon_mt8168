@@ -44,9 +44,6 @@
 #include <linux/regulator/consumer.h>
 #include <linux/kthread.h>
 #include <linux/version.h>
-#if defined(CONFIG_AMZN_METRICS_LOG) || defined(CONFIG_AMZN_MINERVA_METRICS_LOG)
-#include <linux/amzn_metricslog.h>
-#endif
 
 #include "dbmdx-interface.h"
 #include "dbmdx-customer.h"
@@ -117,13 +114,6 @@
 
 #if defined(SND_SOC_BYTES_TLV)
 #define EXTERNAL_SOC_AMODEL_LOADING_ENABLED 1
-#endif
-
-#if defined(CONFIG_AMZN_METRICS_LOG) || defined(CONFIG_AMZN_MINERVA_METRICS_LOG)
-#define DBMDX_METRIC_UPLOAD_PERIOD (60 * 60 * 12)
-#define DBMDX_METRICS_STR_LEN (512)
-DEFINE_MUTEX(metrisUploadLock);
-static struct delayed_work dbmdx_metrics_upload_work;
 #endif
 
 enum dbmdx_fw_debug_mode {
@@ -1329,9 +1319,6 @@ int dbmdx_set_power_mode(
 		struct dbmdx_private *p, enum dbmdx_power_modes mode)
 {
 	int ret = 0;
-#ifdef CONFIG_AMZN_MINERVA_METRICS_LOG
-	char minerva_buf[DBMDX_METRICS_STR_LEN];
-#endif
 	enum dbmdx_power_modes new_mode = p->power_mode;
 
 	dev_dbg(p->dev, "%s: would move %s -> %s (%2.2d -> %2.2d)\n",
@@ -1373,24 +1360,6 @@ int dbmdx_set_power_mode(
 				ret = dbmdx_wake(p);
 			if (ret) {
 				dev_dbg(p->dev, "%s: wakeup error - WDT!",	__func__);
-#ifdef CONFIG_AMZN_METRICS_LOG
-				log_counter_to_vitals(ANDROID_LOG_INFO, "Kernel", "Kernel", "DBMD4_DSP_metrics_count", "DSP_Watchdog", 1, "count", NULL, VITALS_NORMAL);
-				log_to_metrics(ANDROID_LOG_INFO, "voice_dsp", "voice_dsp:def:DSP_Watchdog=1;CT;1:NR");
-#endif
-
-#ifdef CONFIG_AMZN_MINERVA_METRICS_LOG
-				/* dsp vitals need to make sure if enable */
-				log_counter_to_vitals_v2(ANDROID_LOG_INFO,
-						VITALS_DSP_GROUP_ID, VITALS_DSP_COUNTER_SCHEMA_ID,
-						"Kernel", "Kernel", "DBMD4_DSP_metrics_count",
-						"DSP_Watchdog", 1, "count",
-						NULL, VITALS_NORMAL, NULL, NULL);
-				minerva_metrics_log(minerva_buf, DBMDX_METRICS_STR_LEN,
-						"%s:%s:100:%s,%s,%s,DSP_IRQ=false;BO,DSP_RESET=false;BO,"
-						"DSP_WDT=true;BO,DSP_DATA_PROCESS_BEGIN=false;BO:us-east-1",
-						METRICS_DSP_GROUP_ID, METRICS_DSP_VOICE_SCHEMA_ID,
-						PREDEFINED_ESSENTIAL_KEY, PREDEFINED_DEVICE_ID_KEY, PREDEFINED_DEVICE_LANGUAGE_KEY);
-#endif
 				goto out;
 				}
 			break;
@@ -8485,9 +8454,6 @@ static int dbmdx_request_and_load_fw_va_ve_mode(struct dbmdx_private *p)
 		return -EINVAL;
 	}
 
-#if defined(CONFIG_AMZN_METRICS_LOG) || defined(CONFIG_AMZN_MINERVA_METRICS_LOG)
-	mutex_lock(&metrisUploadLock);
-#endif
 	p->lock(p);
 
 	dbmdx_set_boot_active(p);
@@ -8669,9 +8635,6 @@ out_err:
 
 out:
 	p->unlock(p);
-#if defined(CONFIG_AMZN_METRICS_LOG) || defined(CONFIG_AMZN_MINERVA_METRICS_LOG)
-	mutex_unlock(&metrisUploadLock);
-#endif
 	return ret;
 }
 
@@ -16478,30 +16441,8 @@ static int dbmdx_perform_recovery(struct dbmdx_private *p)
 	unsigned int usecase_id;
 	struct vt_engine *vte;
 	struct va_flags	saved_va_flags;
-#ifdef CONFIG_AMZN_MINERVA_METRICS_LOG
-	char minerva_buf[DBMDX_METRICS_STR_LEN];
-#endif
 	dev_info(p->dev, "%s: active FW - %s active_usecase_id = %x\n", __func__,
 			dbmdx_fw_type_to_str(active_fw), p->va_ve_flags.active_usecase_id);
-#ifdef CONFIG_AMZN_METRICS_LOG
-	log_counter_to_vitals(ANDROID_LOG_INFO, "Kernel", "Kernel",
-			"DBMD4_DSP_metrics_count", "DSP_Reset", 1, "count", NULL, VITALS_NORMAL);
-	log_to_metrics(ANDROID_LOG_INFO, "voice_dsp", "voice_dsp:def:DSP_Reset=1;CT;1:NR");
-#endif
-
-#ifdef CONFIG_AMZN_MINERVA_METRICS_LOG
-	/* need to make sure if enable*/
-	log_counter_to_vitals_v2(ANDROID_LOG_INFO,
-			VITALS_DSP_GROUP_ID, VITALS_DSP_COUNTER_SCHEMA_ID,
-			"Kernel", "Kernel", "DBMD4_DSP_metrics_count",
-			"DSP_Reset", 1, "count",
-			NULL, VITALS_NORMAL, NULL, NULL);
-	minerva_metrics_log(minerva_buf, DBMDX_METRICS_STR_LEN,
-			"%s:%s:100:%s,%s,%s,DSP_IRQ=false;BO,DSP_RESET=true;BO,"
-			"DSP_WDT=false;BO,DSP_DATA_PROCESS_BEGIN=false;BO:us-east-1",
-			METRICS_DSP_GROUP_ID, METRICS_DSP_VOICE_SCHEMA_ID,
-			PREDEFINED_ESSENTIAL_KEY, PREDEFINED_DEVICE_ID_KEY, PREDEFINED_DEVICE_LANGUAGE_KEY);
-#endif
 
 	usecase_id = p->va_ve_flags.active_usecase_id;
 	if (active_fw == DBMDX_FW_VA) {
@@ -18714,9 +18655,6 @@ static int dbmdx_process_detection_irq(struct dbmdx_private *p,
 	int ret = 0;
 	char uevent_buf[256];
 	s64 event_time_ms;
-#ifdef CONFIG_AMZN_MINERVA_METRICS_LOG
-	char minerva_buf[DBMDX_METRICS_STR_LEN];
-#endif
 	dev_dbg(p->dev, "%s send_uevent_on_detection = %d\n", __func__, p->pdata->send_uevent_on_detection);
 
 	event_time_ms = ktime_to_ms(ktime_get_real());
@@ -18829,26 +18767,6 @@ static int dbmdx_process_detection_irq(struct dbmdx_private *p,
 				dev_err(p->dev,
 					"%s: Sending uevent failed %d\n",
 					__func__, ret);
-
-#ifdef CONFIG_AMZN_METRICS_LOG
-			log_counter_to_vitals(ANDROID_LOG_INFO, "Kernel", "Kernel", "DBMD4_DSP_metrics_count", "DSP_IRQ", 1, "count", NULL, VITALS_NORMAL);
-			log_to_metrics(ANDROID_LOG_INFO, "voice_dsp", "voice_dsp:def:DSP_IRQ=1;CT;1:NR");
-#endif
-
-#ifdef CONFIG_AMZN_MINERVA_METRICS_LOG
-			/* need to make sure if enable*/
-			log_counter_to_vitals_v2(ANDROID_LOG_INFO,
-					VITALS_DSP_GROUP_ID, VITALS_DSP_COUNTER_SCHEMA_ID,
-					"Kernel", "Kernel", "DBMD4_DSP_metrics_count",
-					"DSP_IRQ", 1, "count",
-					NULL, VITALS_NORMAL, NULL, NULL);
-
-			minerva_metrics_log(minerva_buf, DBMDX_METRICS_STR_LEN,
-					"%s:%s:100:%s,%s,%s,DSP_IRQ=true;BO,DSP_RESET=false;BO,"
-					"DSP_WDT=false;BO,DSP_DATA_PROCESS_BEGIN=false;BO:us-east-1",
-					METRICS_DSP_GROUP_ID, METRICS_DSP_VOICE_SCHEMA_ID,
-					PREDEFINED_ESSENTIAL_KEY, PREDEFINED_DEVICE_ID_KEY, PREDEFINED_DEVICE_LANGUAGE_KEY);
-#endif
 		}
 	}
 
@@ -19207,11 +19125,6 @@ out_fail_unlock:
 
 #if defined(CONFIG_SND_SOC_DBMDX_SND_CAPTURE)
 
-// 16kHz * 1ch * 16bits
-#define ONE_MS_DATA_LENGTH (16 * 1 * 2)
-// 480ms pre-roll, 330ms delay + 190ms Alexa
-#define MIN_SUSPEND_AUDIO_DURATION (480 + 330 + 190)
-
 static void dbmdx_pcm_streaming_work_mod_0(struct work_struct *work)
 {
 	struct dbmdx_private *p = container_of(
@@ -19244,14 +19157,6 @@ static void dbmdx_pcm_streaming_work_mod_0(struct work_struct *work)
 	size_t data_offset;
 	u16 cur_config = 0xffff;
 	struct usecase_config *cur_usecase = NULL;
-#if defined(CONFIG_AMZN_METRICS_LOG) || defined(CONFIG_AMZN_MINERVA_METRICS_LOG)
-	ktime_t Current;
-#endif
-
-#if defined(CONFIG_AMZN_MINERVA_METRICS_LOG)
-	char minerva_buf[DBMDX_METRICS_STR_LEN];
-#endif
-	size_t period_bytes = 0;
 
 	if (substream == NULL) {
 		dev_err(p->dev,	"%s Error No Active Substream\n", __func__);
@@ -19305,8 +19210,6 @@ static void dbmdx_pcm_streaming_work_mod_0(struct work_struct *work)
 	samples_chunk_size =
 		(u32)(frame_in_bytes * p->pdata->va_audio_channels) /
 		(8 * bytes_per_sample * runtime->channels);
-
-	period_bytes = snd_pcm_lib_period_bytes(substream);
 
 	if (((u32)(frame_in_bytes * p->pdata->va_audio_channels) %
 		(8 * bytes_per_sample * runtime->channels)))
@@ -19445,62 +19348,6 @@ static void dbmdx_pcm_streaming_work_mod_0(struct work_struct *work)
 				sleep_time_ms =
 					(u32)(missing_samples * 8 * 1000) /
 					p->current_pcm_rate;
-
-				if (p->fgMetricLogPrint == false) {
-
-#if defined(CONFIG_AMZN_METRICS_LOG)
-					p->fgMetricLogPrint = true;
-					Current = ktime_get();
-					if (p->dspStreamDuration >= MIN_SUSPEND_AUDIO_DURATION) {
-						char buf[128];
-						snprintf(buf, sizeof(buf),
-							"voice_dsp:def:DSP_catchup_ms=%lld;TI;1:NR",
-							ktime_to_ms(Current) - ktime_to_ms(p->StreamOpenTime));
-						log_to_metrics(ANDROID_LOG_INFO, "voice_dsp", buf);
-						log_timer_to_vitals(ANDROID_LOG_INFO, "Kernel", "Kernel",
-							"DBMD4_DSP_metrics_time", "DSP_DATA_CATCH-UP_FINISH",
-							ktime_to_ms(Current)  - ktime_to_ms(p->StreamOpenTime),
-							"ms", VITALS_NORMAL);
-					} else
-						log_timer_to_vitals(ANDROID_LOG_INFO, "Kernel", "Kernel",
-							"DBMD4_DSP_metrics_time", "DSP_DATA_PROCESS_FINISH",
-							ktime_to_ms(Current)  - ktime_to_ms(p->StreamOpenTime),
-							"ms", VITALS_NORMAL);
-#endif
-
-#ifdef CONFIG_AMZN_MINERVA_METRICS_LOG
-					p->fgMetricLogPrint = true;
-					Current = ktime_get();
-					if (p->dspStreamDuration >= MIN_SUSPEND_AUDIO_DURATION) {
-						minerva_metrics_log(minerva_buf, DBMDX_METRICS_STR_LEN,
-								"%s:%s:100:%s,%s,%s,DSP_DATA_CATCH_UP_FINISH=%d;IN,"
-								"DSP_DATA_PROCESS_FINISH=%d;IN,DSP_DATA_CANCEL=%d;IN:us-east-1",
-								METRICS_DSP_GROUP_ID, METRICS_DSP_CATCH_SCHEMA_ID,
-								PREDEFINED_ESSENTIAL_KEY, PREDEFINED_DEVICE_ID_KEY, PREDEFINED_DEVICE_LANGUAGE_KEY,
-								ktime_to_ms(Current) - ktime_to_ms(p->StreamOpenTime), -1, -1);
-						log_timer_to_vitals_v2(ANDROID_LOG_INFO,
-							VITALS_DSP_GROUP_ID, VITALS_DSP_TIMER_SCHEMA_ID,
-							"Kernel", "Kernel", "DBMD4_DSP_metrics_time",
-							"DSP_DATA_CATCH-UP_FINISH",
-							ktime_to_ms(Current)  - ktime_to_ms(p->StreamOpenTime),
-							"ms", VITALS_NORMAL, NULL, NULL);
-					} else {
-						minerva_metrics_log(minerva_buf, DBMDX_METRICS_STR_LEN,
-								"%s:%s:100:%s,%s,%s,DSP_DATA_CATCH_UP_FINISH=%d;IN,"
-								"DSP_DATA_PROCESS_FINISH=%d;IN,DSP_DATA_CANCEL=%d;IN:us-east-1",
-								METRICS_DSP_GROUP_ID, METRICS_DSP_CATCH_SCHEMA_ID,
-								PREDEFINED_ESSENTIAL_KEY, PREDEFINED_DEVICE_ID_KEY,
-								PREDEFINED_DEVICE_LANGUAGE_KEY,
-								-1, ktime_to_ms(Current) - ktime_to_ms(p->StreamOpenTime), -1);
-						log_timer_to_vitals_v2(ANDROID_LOG_INFO,
-							VITALS_DSP_GROUP_ID, VITALS_DSP_TIMER_SCHEMA_ID,
-							"Kernel", "Kernel", "DBMD4_DSP_metrics_time",
-							"DSP_DATA_PROCESS_FINISH",
-							ktime_to_ms(Current) - ktime_to_ms(p->StreamOpenTime),
-							"ms", VITALS_NORMAL, NULL, NULL);
-					}
-#endif
-				}
 			}
 
 			nr_samples = samples_chunk_size;
@@ -19596,8 +19443,6 @@ static void dbmdx_pcm_streaming_work_mod_0(struct work_struct *work)
 				stream_set_position(substream, pos);
 
 				snd_pcm_period_elapsed(substream);
-
-				p->dspStreamDuration += period_bytes / ONE_MS_DATA_LENGTH;
 			}
 
 			retries = 0;
@@ -23221,96 +23066,6 @@ static int adf_debug_write(uintptr_t dest, uintptr_t src, int size)
 	return dbmdx_debug_write((u8 *)dest, (u8 *)src, size);
 }
 
-#if defined(CONFIG_AMZN_METRICS_LOG) || defined(CONFIG_AMZN_MINERVA_METRICS_LOG)
-static void *dbmdx_dsp_log_fliter(char *logLine)
-{
-	static uint32_t freqIndex;
-	static uint32_t freqTs[3];
-	static bool startRec;
-	uint32_t logLen = 0;
-	char *tsPtr = NULL;
-
-	if (strstr(logLine, "[CTRL_CLI] Dump the power/freq")) {
-		startRec = true;
-		freqIndex = 0;
-		memset(freqTs, 0, sizeof(freqTs));
-	}
-
-	if (strstr(logLine, "[CLI] argc: 2, rc: 0, argv: ctrl power"))
-		startRec = false;
-
-	if (startRec) {
-		if (strstr(logLine, "[CTRL_CLI]") && strstr(logLine, "% ")) {
-			logLen = strlen(logLine);
-			tsPtr = logLine + logLen;
-			while (*tsPtr != ' ' && (uintptr_t)tsPtr > (uintptr_t)logLine)
-				tsPtr--;
-			tsPtr++;
-			if (freqIndex < ARRAY_SIZE(freqTs)) {
-				if (kstrtou32(tsPtr, 10, &freqTs[freqIndex]))
-					freqTs[freqIndex] = 0;
-				freqIndex++;
-			}
-		}
-	}
-
-	return freqTs;
-}
-
-static void dbmdx_do_metrics_upload_work(struct work_struct *work)
-{
-	uint32_t *freqTs = NULL;
-	char metricsLogBuf[DBMDX_METRICS_STR_LEN] = {'\0'};
-	char *cliCmds[2] = {"ctrl power ", "ctrl power 1 "};
-#ifdef CONFIG_AMZN_METRICS_LOG
-	int ret = 0;
-#endif
-	/*
-	 * only upload mertrics when dsp firmware load & run
-	 * if firmware not load or WDT happend， skip
-	 */
-	if (dbmdx_data->device_ready) {
-		mutex_lock(&metrisUploadLock);
-		freqTs = (uint32_t *)adfDebug_query(0, cliCmds, ARRAY_SIZE(cliCmds), dbmdx_dsp_log_fliter);
-		mutex_unlock(&metrisUploadLock);
-		if (freqTs) {
-			/*
-			* upload freq time occupation to metrics (seconds)
-			* freq_idl_ts stand for 80MHZ
-			* freq_run_ts stand for 20MHZ
-			* freq_vad_ts stand for 10MHZ
-			* freq table in dsp log as below
-			* [ 61706]<I>[CTRL_CLI] Dump the power/freq interval, total 60705
-			* [ 61707]<I>[CTRL_CLI] IDX  FREQ(KHz) PERC  INTERVAL(ms)
-			* [ 61708]<I>[CTRL_CLI] =================================
-			* [ 61709]<I>[CTRL_CLI]   0     81920   17%  10753
-			* [ 61710]<I>[CTRL_CLI]   1     20480   82%  49935
-			* [ 61711]<I>[CTRL_CLI]   2     10240    0%  17
-			*/
-#ifdef CONFIG_AMZN_METRICS_LOG
-			snprintf(metricsLogBuf, DBMDX_METRICS_STR_LEN,
-					"voice_dsp:def:freq_idl_ts=%d;CT;1,freq_run_ts=%d;CT;1,freq_vad_ts=%d;CT;1:NR",
-					*freqTs / 1000,
-					*(freqTs + 1) / 1000,
-					*(freqTs + 2) / 1000);
-			ret = log_to_metrics(ANDROID_LOG_INFO, "voice_dsp", metricsLogBuf);
-			if (ret)
-				pr_err("log_to_metrics: fails to upload dsp freq duration %d\n", ret);
-#endif
-
-#ifdef CONFIG_AMZN_MINERVA_METRICS_LOG
-			minerva_metrics_log(metricsLogBuf, DBMDX_METRICS_STR_LEN,
-					"%s:%s:100:%s,%s,%s,FREQ_IDLE_TS=%d;IN,"
-					"FREQ_RUN_TS=%d;IN,FREQ_VAD_TS=%d;IN:us-east-1",
-					METRICS_DSP_GROUP_ID, METRICS_DSP_FREQ_SCHEMA_ID,
-					PREDEFINED_ESSENTIAL_KEY, PREDEFINED_DEVICE_ID_KEY, PREDEFINED_DEVICE_LANGUAGE_KEY,
-					*freqTs / 1000, *(freqTs + 1) / 1000, *(freqTs + 2) / 1000);
-#endif
-		}
-	}
-	schedule_delayed_work(&dbmdx_metrics_upload_work, msecs_to_jiffies(DBMDX_METRIC_UPLOAD_PERIOD * 1000));
-}
-#endif
 #endif /* CONFIG_AMAZON_DSP_FRAMEWORK */
 
 static int dbmdx_platform_probe(struct platform_device *pdev)
@@ -23465,11 +23220,6 @@ static int dbmdx_platform_probe(struct platform_device *pdev)
 	ret = adfDebug_initFs(adf_debug_read, adf_debug_write);
 	if (ret < 0)
 		dev_info(p->dev, "failed to add adf debugfs files\n");
-#if defined(CONFIG_AMZN_METRICS_LOG) || defined(CONFIG_AMZN_MINERVA_METRICS_LOG)
-	/* init metrics upload work*/
-	INIT_DELAYED_WORK(&dbmdx_metrics_upload_work, dbmdx_do_metrics_upload_work);
-	schedule_delayed_work(&dbmdx_metrics_upload_work, msecs_to_jiffies(DBMDX_METRIC_UPLOAD_PERIOD * 1000));
-#endif
 #endif /* CONFIG_AMAZON_DSP_FRAMEWORK */
 
 	dev_info(p->dev, "%s: successfully probed\n", __func__);
