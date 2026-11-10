@@ -165,6 +165,15 @@ source "drivers/misc/mediatek/cam_cal/Kconfig"
 source "drivers/misc/mediatek/cmdq/Kconfig"
 source "drivers/misc/mediatek/hdmi/Kconfig"
 source "drivers/misc/mediatek/imgsensor/Kconfig"
+
+config MTK_CAMERA_FIREOS7
+	bool "Build the FireOS 7 camera drivers"
+	depends on MACH_MT8168
+	help
+	  Build imgsensor, cam_cal and cameraisp from camera_fireos7/, the
+	  onyx FireOS 7 copies, instead of the FireOS 8 ones. Their ioctl
+	  ABI matches the FireOS 7 camera HAL.
+
 source "drivers/misc/mediatek/smi/Kconfig"
 source "drivers/misc/mediatek/lcm/Kconfig"
 source "drivers/misc/mediatek/video/Kconfig"

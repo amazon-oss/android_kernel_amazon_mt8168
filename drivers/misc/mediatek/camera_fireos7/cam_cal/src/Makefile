@@ -1,5 +1,5 @@
 #$(info cam_cal: makefile start)
-MTK_CUSTOM_PATH  := $(srctree)/drivers/misc/mediatek
+MTK_CUSTOM_PATH  := $(srctree)/drivers/misc/mediatek/camera_fireos7
 
 subdir-ccflags-y += -I$(MTK_CUSTOM_PATH)/imgsensor/inc \
                     -I$(MTK_CUSTOM_PATH)/imgsensor/src/$(CONFIG_MTK_PLATFORM)/camera_hw \

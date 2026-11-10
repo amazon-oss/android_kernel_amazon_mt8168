@@ -1,7 +1,7 @@
 obj-y := fdvt_dummy.o
 
 #$(info FDVT: makefile start)
-MTK_CUSTOM_PATH  := $(srctree)/drivers/misc/mediatek
+MTK_CUSTOM_PATH  := $(srctree)/drivers/misc/mediatek/camera_fireos7
 
 FDVT_35_PLATFORM = mt6763 mt6761
 FDVT_40_PLATFORM = mt6758 mt6757 mt6799 mt6759 mt6775 mt6771 mt6765

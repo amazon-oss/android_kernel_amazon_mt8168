@@ -24,15 +24,16 @@ CONFIG_MTK_PLATFORM_SENSOR := $(CONFIG_MTK_PLATFORM)
 subdir-ccflags-y += -I$(MTK_PROJECT_PATH_ROOT)/camera/camera
 
 MTK_DRIVER_PATH  := $(srctree)/drivers/misc/mediatek
+CAMERA_PATH := $(srctree)/drivers/misc/mediatek/camera_fireos7
 
 subdir-ccflags-y += -I$(MTK_DRIVER_PATH)/camera/$(MTK_PLATFORM) \
-             -I$(MTK_DRIVER_PATH)/imgsensor/inc \
-             -I$(MTK_DRIVER_PATH)/imgsensor/src/$(CONFIG_MTK_PLATFORM_SENSOR)/camera_project/$(ARCH_MTK_PROJECT)/camera_hw \
-             -I$(MTK_DRIVER_PATH)/imgsensor/src/$(CONFIG_MTK_PLATFORM_SENSOR)/camera_hw	\
-             -I$(MTK_DRIVER_PATH)/cam_cal/inc \
+             -I$(CAMERA_PATH)/imgsensor/inc \
+             -I$(CAMERA_PATH)/imgsensor/src/$(CONFIG_MTK_PLATFORM_SENSOR)/camera_project/$(ARCH_MTK_PROJECT)/camera_hw \
+             -I$(CAMERA_PATH)/imgsensor/src/$(CONFIG_MTK_PLATFORM_SENSOR)/camera_hw	\
+             -I$(CAMERA_PATH)/cam_cal/inc \
              -I$(MTK_DRIVER_PATH)/smi \
              -I$(MTK_DRIVER_PATH)/include/mt-plat/$(MTK_PLATFORM)/include/mach \
-             -I$(MTK_DRIVER_PATH)/imgsensor/src/$(CONFIG_MTK_PLATFORM_SENSOR)
+             -I$(CAMERA_PATH)/imgsensor/src/$(CONFIG_MTK_PLATFORM_SENSOR)
 
 
 CUSTOM_KERNEL_FLAGS := $(addprefix -D, $(shell echo \

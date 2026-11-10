@@ -51,9 +51,13 @@ obj-$(CONFIG_MTK_GIC_EXT) += ext_gic/
 obj-$(CONFIG_MTPROF)	+= mtprof/
 obj-$(CONFIG_MEDIATEK_SOLUTION) += sched/
 obj-$(CONFIG_MTK_FREQ_HOPPING) += freqhopping/
+ifeq ($(CONFIG_MTK_CAMERA_FIREOS7),y)
+obj-y += camera_fireos7/
+else
 obj-y += cameraisp/
 obj-$(CONFIG_MTK_IMGSENSOR) += imgsensor/src/
 obj-$(CONFIG_MTK_CAM_CAL) += cam_cal/src/
+endif
 obj-$(CONFIG_MTK_LENS)   += lens/
 obj-$(CONFIG_MTK_FLASHLIGHT) += flashlight/
 obj-$(CONFIG_RT_FLASHLIGHT)     += flashlight/richtek/
