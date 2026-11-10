@@ -15,8 +15,8 @@ int compat_wext_handle_ioctl(struct net *net, unsigned int cmd,
 struct iw_statistics *get_wireless_stats(struct net_device *dev);
 int call_commit_handler(struct net_device *dev);
 #else
-static inline int wext_handle_ioctl(struct net *net, struct iwreq *iwr, unsigned int cmd,
-				    void __user *arg)
+static inline int wext_handle_ioctl(struct net *net, struct iwreq *iwr,
+				unsigned int cmd, void __user *arg)
 {
 	return -EINVAL;
 }
