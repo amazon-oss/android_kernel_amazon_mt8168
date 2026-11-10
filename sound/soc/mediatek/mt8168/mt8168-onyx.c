@@ -103,8 +103,7 @@ enum {
 	DAI_LINK_TDM_OUT,
 	DAI_LINK_TDM_IN,
 #ifdef CONFIG_SND_SOC_MTK_BTCVSD
-	DAI_LINK_BTCVSD_RX,
-	DAI_LINK_BTCVSD_TX,
+	DAI_LINK_BTCVSD,
 #endif
 #ifdef CONFIG_MTK_HIFIXDSP_SUPPORT
 	DAI_LINK_FE_HOSTLESS_VA,
@@ -761,23 +760,13 @@ static struct snd_soc_dai_link mt8168_onyx_dais[] = {
 		.dpcm_capture = 1,
 	},
 #ifdef CONFIG_SND_SOC_MTK_BTCVSD
-	[DAI_LINK_BTCVSD_RX] = {
-		.name = "BTCVSD_RX",
-		.stream_name = "BTCVSD_Capture",
+	[DAI_LINK_BTCVSD] = {
+		.name = "BTCVSD",
+		.stream_name = "BTCVSD",
 		.cpu_dai_name = "snd-soc-dummy-dai",
-		.platform_name = "mt-soc-btcvsd-rx-pcm",
+		.platform_name = "18050000.mtk-btcvsd-snd",
 		.codec_name = "snd-soc-dummy",
 		.codec_dai_name = "snd-soc-dummy-dai",
-		.capture_only = 1,
-	},
-	[DAI_LINK_BTCVSD_TX] = {
-		.name = "BTCVSD_TX",
-		.stream_name = "BTCVSD_Playback",
-		.cpu_dai_name = "snd-soc-dummy-dai",
-		.platform_name = "mt-soc-btcvsd-tx-pcm",
-		.codec_name = "snd-soc-dummy",
-		.codec_dai_name = "snd-soc-dummy-dai",
-		.playback_only = 1,
 	},
 #endif
 #ifdef CONFIG_MTK_HIFIXDSP_SUPPORT
