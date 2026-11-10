@@ -464,8 +464,6 @@ static int suspend_enter(suspend_state_t state, bool *wakeup)
 			if (!error)
 				resume_from_machine_suspend = true;
 #endif
-
-			pr_notice("[METRICS_RESUME] Device suspend exit\n");
 		} else if (*wakeup) {
 			error = -EBUSY;
 		}
