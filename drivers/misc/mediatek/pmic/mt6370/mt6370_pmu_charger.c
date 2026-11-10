@@ -3614,9 +3614,6 @@ static irqreturn_t mt6370_pmu_ovpctrl_swon_evt_irq_handler(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
-#ifdef CONFIG_FUSB251
-extern void fusb251_vbus_changed(void);
-#endif
 static irqreturn_t mt6370_pmu_ovpctrl_uvp_d_evt_irq_handler(int irq, void *data)
 {
 #if defined(CONFIG_MT6370_PMU_CHARGER_TYPE_DETECT) \
@@ -3628,10 +3625,8 @@ static irqreturn_t mt6370_pmu_ovpctrl_uvp_d_evt_irq_handler(int irq, void *data)
 
 	dev_err(chg_data->dev, "%s\n", __func__);
 
-#ifdef CONFIG_FUSB251
-	fusb251_vbus_changed();
-#endif
-#if defined(CONFIG_AMZN_LD) || defined(CONFIG_MAX20342)
+#if defined(CONFIG_AMZN_LD) || defined(CONFIG_MAX20342) || \
+	defined(CONFIG_FUSB251)
 	charger_dev_notify(chg_data->chg_dev, CHARGER_DEV_NOTIFY_VBUS_EVENT);
 #endif
 	/* Check UVP_D_STAT & OTG mode */
@@ -3677,10 +3672,8 @@ out:
 	struct mt6370_pmu_charger_data *chg_data =
 		 (struct mt6370_pmu_charger_data *)data;
 
-#ifdef CONFIG_FUSB251
-	fusb251_vbus_changed();
-#endif
-#if defined(CONFIG_AMZN_LD) || defined(CONFIG_MAX20342)
+#if defined(CONFIG_AMZN_LD) || defined(CONFIG_MAX20342) || \
+	defined(CONFIG_FUSB251)
 	charger_dev_notify(chg_data->chg_dev, CHARGER_DEV_NOTIFY_VBUS_EVENT);
 #endif
 #endif /* CONFIG_MT6370_PMU_CHARGER_TYPE_DETECT && !CONFIG_TCPC_CLASS */
