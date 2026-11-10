@@ -722,6 +722,8 @@ ROOT_NODE {
 		touchscreen-size-y = <1024>;
 		touchscreen-max-w = <512>;
 		touchscreen-max-p = <512>;
+		touchscreen-inverted-x;
+		touchscreen-inverted-y;
 		goodix,slide-wakeup = <1>;
 		goodix,type-a-report = <0>;
 		goodix,driver-send-cfg = <1>;

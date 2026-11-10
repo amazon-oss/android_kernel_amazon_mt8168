@@ -471,8 +471,10 @@ static void gtp_type_a_report(struct goodix_ts_data *ts, u8 touch_num,
 				input_report_key(ts->input_dev, BTN_TOOL_FINGER, true);
 			}
 
-			points->x = ts->pdata->abs_size_x - points->x;
-			points->y = ts->pdata->abs_size_y - points->y;
+			if (ts->pdata->invert_x)
+				points->x = ts->pdata->abs_size_x - points->x;
+			if (ts->pdata->invert_y)
+				points->y = ts->pdata->abs_size_y - points->y;
 
 			input_report_abs(ts->input_dev, ABS_MT_POSITION_X,
 					 points->x);
@@ -526,8 +528,10 @@ static void gtp_mt_slot_report(struct goodix_ts_data *ts, u8 touch_num,
 							   MT_TOOL_FINGER, true);
 			}
 
-			points->x = ts->pdata->abs_size_x - points->x;
-			points->y = ts->pdata->abs_size_y - points->y;
+			if (ts->pdata->invert_x)
+				points->x = ts->pdata->abs_size_x - points->x;
+			if (ts->pdata->invert_y)
+				points->y = ts->pdata->abs_size_y - points->y;
 			input_report_abs(ts->input_dev, ABS_MT_POSITION_X,
 					 points->x);
 			input_report_abs(ts->input_dev, ABS_MT_POSITION_Y,
@@ -1881,6 +1885,9 @@ static int gtp_parse_dt(struct device *dev,
 	of_property_read_u32(np, "goodix,swap-x2y", &pdata->swap_x2y);
 	if (pdata->swap_x2y)
 		dev_dbg(dev, "swap-x2y enabled\n");
+
+	pdata->invert_x = of_property_read_bool(np, "touchscreen-inverted-x");
+	pdata->invert_y = of_property_read_bool(np, "touchscreen-inverted-y");
 
 	of_property_read_u32(np, "goodix,slide-wakeup", &pdata->slide_wakeup);
 	if (pdata->slide_wakeup)

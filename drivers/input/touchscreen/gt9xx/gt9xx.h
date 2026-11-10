@@ -94,6 +94,8 @@ struct goodix_ts_platform_data {
 	u32 int_sync;
 	u32 driver_send_cfg;
 	u32 swap_x2y;
+	bool invert_x;
+	bool invert_y;
 	u32 slide_wakeup;
 	atomic_t gesture_ex_switch;
 	atomic_t gesture_switch;
