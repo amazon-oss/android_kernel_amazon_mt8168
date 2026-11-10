@@ -208,7 +208,4 @@ int thermal_zone_debounce(int *pre_temp, int *curr_temp,
 		int delta_temp, int *count, char *thermal_zone_device_type);
 #endif
 
-#ifdef CONFIG_THERMAL_SHUTDOWN_LAST_KMESG
-void last_kmsg_thermal_shutdown(void);
-#endif
 #endif /* __LINUX_THERMAL_FRAMEWORK_H__*/

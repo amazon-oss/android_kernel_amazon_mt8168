@@ -84,9 +84,7 @@
 #ifdef CONFIG_AMZN_SIGN_OF_LIFE
 #include <linux/amzn_sign_of_life.h>
 #endif
-#ifdef CONFIG_THERMAL_SHUTDOWN_LAST_KMESG
 #include <linux/thermal_framework.h>
-#endif
 
 /*=============================================================
  *Local variable definition
@@ -569,13 +567,6 @@ static int tscpu_thermal_notify(struct thermal_zone_device *thermal,
 	}
 #endif
 
-#ifdef CONFIG_THERMAL_SHUTDOWN_LAST_KMESG
-	if (type == THERMAL_TRIP_CRITICAL) {
-		pr_err("%s: thermal_shutdown notify\n", __func__);
-		last_kmsg_thermal_shutdown();
-		pr_err("%s: thermal_shutdown notify end\n", __func__);
-	}
-#endif
 	if (type == THERMAL_TRIP_CRITICAL)
 		set_shutdown_enable_dcap(&thermal->device);
 
