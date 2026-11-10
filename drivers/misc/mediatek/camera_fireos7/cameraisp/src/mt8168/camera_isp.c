@@ -13868,7 +13868,7 @@ static signed int ISP_probe(struct platform_device *pDev)
 #else
 	wake_lock_init(&isp_wake_lock, WAKE_LOCK_SUSPEND, "isp_lock_wakelock");
 #endif
-	clk_wake_lock = wakeup_source_register("isp_clk_wakelock");
+	clk_wake_lock = wakeup_source_register(NULL, "isp_clk_wakelock");
 
 	/*      */
 	INIT_WORK(&IspInfo.ScheduleWorkVD, ISP_ScheduleWork_VD);
