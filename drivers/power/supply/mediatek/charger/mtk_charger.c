@@ -2837,6 +2837,9 @@ static int mtk_charger_parse_dt(struct charger_manager *info,
 
 	if (of_property_read_u32(np, "temp_t0_to_t1_charger_current", &val) >= 0)
 		info->data.temp_t0_to_t1_charger_current = val;
+	else if (of_property_read_u32(np, "temp_t0_charging_current_limit",
+		&val) >= 0)
+		info->data.temp_t0_to_t1_charger_current = val;
 	else {
 		chr_err("use default temp_t0_to_t1_charger_current:%d\n",
 			TEMP_T0_TO_T1_DEFAULT_CHARGING_CURRENT);
@@ -2845,6 +2848,9 @@ static int mtk_charger_parse_dt(struct charger_manager *info,
 	}
 
 	if (of_property_read_u32(np, "temp_t3_to_t4_charger_current", &val) >= 0)
+		info->data.temp_t3_to_t4_charger_current = val;
+	else if (of_property_read_u32(np, "temp_t3_charging_current_limit",
+		&val) >= 0)
 		info->data.temp_t3_to_t4_charger_current = val;
 	else {
 		chr_err("use default charging current\n");
