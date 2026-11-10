@@ -52,4 +52,4 @@ obj-$(CONFIG_DRM_VBOXVIDEO)	+= vboxvideo/
 obj-$(CONFIG_PI433)		+= pi433/
 obj-$(CONFIG_NANOHUB)		+= nanohub/
 obj-$(CONFIG_AMAZON)            += amazon/
-obj-$(CONFIG_AMZN)              += ../../../../../../device/amazon/kernel/driver/
+obj-$(CONFIG_AMZN)              += amzn/
