@@ -618,4 +618,5 @@ source "drivers/power/supply/mediatek/fusb301a/Kconfig"
 source "drivers/power/supply/mediatek/wusb3801x/Kconfig"
 source "drivers/power/supply/mediatek/max20342/Kconfig"
 source "drivers/power/supply/mediatek/amzn_ld/Kconfig"
+source "drivers/power/supply/mediatek/pubadc_manage/Kconfig"
 endif # POWER_SUPPLY

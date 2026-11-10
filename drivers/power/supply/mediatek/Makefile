@@ -33,3 +33,4 @@ obj-y += fusb301a/
 obj-y += wusb3801x/
 obj-y += max20342/
 obj-y += amzn_ld/
+obj-y += pubadc_manage/
