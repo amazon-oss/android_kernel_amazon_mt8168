@@ -60,8 +60,8 @@ config SND_SOC_MT8168_FPGA
 	  If unsure select "N".
 	  Ex: MT8168
 
-config SND_SOC_MT8168_ABC
-	tristate "ASoC Audio driver for ABC Board"
+config SND_SOC_MT8168_ONYX
+	tristate "ASoC Audio driver for Onyx Board"
 	depends on SND_SOC_MT8168
 	help
 	  This adds support for ASoC machine driver for Mediatek MT8168
