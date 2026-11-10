@@ -14617,7 +14617,7 @@ int32_t ISP_BeginGCECallback(uint32_t taskID,
 {
 	log_dbg("+,taskID(%d)", taskID);
 
-	*regCount = sizeof(addressToDump) / sizeof(uint32_t);
+	*regCount = sizeof(addressToDump) / sizeof(uint32_t *);
 	*regAddress = (uint32_t *) addressToDump;
 
 	log_dbg("-,*regCount(%d)", *regCount);
