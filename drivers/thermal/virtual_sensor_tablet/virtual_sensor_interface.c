@@ -186,7 +186,11 @@ int vs_set_cooling_level(struct thermal_cooling_device *cdev,
 			(level_limit == -1) ? -1 : level_limit * 1000,
 			POWER_SUPPLY_PROP_CHARGE_CONTROL_LIMIT);
 	case VS_THERMAL_COOLER_BACKLIGHT:
+#ifdef CONFIG_MTK_LEDS
 		return setMaxbrightness(level_limit, 1);
+#else
+		return led_setMaxbrightness(level_limit, 1);
+#endif
 	case VS_THERMAL_COOLER_WIRELESS_CHG:
 		return set_charging_level_limit(level_limit,
 				POWER_SUPPLY_PROP_THERMAL_INPUT_POWER_LIMIT);
