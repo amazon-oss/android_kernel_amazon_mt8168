@@ -1030,13 +1030,13 @@ static int fts_power_source_exit(struct fts_ts_data *ts_data)
     if (!IS_ERR_OR_NULL(ts_data->vdd)) {
 	if (regulator_count_voltages(ts_data->vdd) > 0)
 		regulator_set_voltage(ts_data->vdd, 0, FTS_VTG_MAX_UV);
-		regulator_put(ts_data->vdd);
+	regulator_put(ts_data->vdd);
     }
 
     if (!IS_ERR_OR_NULL(ts_data->vcc_i2c)) {
 	if (regulator_count_voltages(ts_data->vcc_i2c) > 0)
 		regulator_set_voltage(ts_data->vcc_i2c, 0, FTS_I2C_VTG_MAX_UV);
-		regulator_put(ts_data->vcc_i2c);
+	regulator_put(ts_data->vcc_i2c);
     }
 
     return 0;
