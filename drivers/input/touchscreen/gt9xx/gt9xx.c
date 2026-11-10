@@ -24,10 +24,6 @@
 #include <linux/input/mt.h>
 #include "gt9xx.h"
 
-#if defined(CONFIG_AMZN_METRICS_LOG) || defined(CONFIG_AMZN_MINERVA_METRICS_LOG)
-#include <linux/amzn_metricslog.h>
-#endif
-
 #define GOODIX_COORDS_ARR_SIZE	4
 #define PROP_NAME_SIZE		256
 #define I2C_MAX_TRANSFER_SIZE   255
@@ -2616,9 +2612,6 @@ static void gtp_esd_check_func(struct work_struct *work)
 {
 	s32 i;
 	s32 ret = -1;
-#if defined(CONFIG_AMZN_METRICS_LOG) || (CONFIG_AMZN_MINERVA_METRICS_LOG)
-	char buf[320];
-#endif
 	u8 esd_buf[5] = { (u8)(GTP_REG_COMMAND >> 8), (u8)GTP_REG_COMMAND };
 	struct delayed_work *dwork = to_delayed_work(work);
 	struct goodix_ts_esd *ts_esd = container_of(dwork, struct goodix_ts_esd,
@@ -2680,17 +2673,6 @@ static void gtp_esd_check_func(struct work_struct *work)
 		gtp_reset_guitar(ts->client, 50);
 		msleep(GTP_50_DLY_MS);
 		gtp_send_cfg(ts->client);
-#if defined(CONFIG_AMZN_MINERVA_METRICS_LOG)
-		minerva_metrics_log(buf, 320, "%s:%s:100:%s,%s,%s,%s,"
-			"lcm_state=None;SY,ESD_Recovery=1;IN:us-east-1",
-			METRICS_LCD_GROUP_ID, METRICS_LCD_SCHEMA_ID,
-			PREDEFINED_ESSENTIAL_KEY, PREDEFINED_MODEL_KEY,
-			PREDEFINED_TZ_KEY, PREDEFINED_DEVICE_LANGUAGE_KEY);
-#elif defined(CONFIG_AMZN_METRICS_LOG)
-		snprintf(buf, sizeof(buf),
-			"touch:gt9xx:ESD_recovery=1;CT;1:NR");
-		log_to_metrics(ANDROID_LOG_INFO, "TouchEvent", buf);
-#endif
 	}
 
 	if (ts_esd->esd_on == true && !test_bit(SLEEP_MODE, &ts->flags)) {
