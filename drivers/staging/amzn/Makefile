@@ -11,8 +11,6 @@
 # See http://www.gnu.org/licenses/gpl-2.0.html for more details.
 #
 
-obj-$(CONFIG_AMZN_SIGN_OF_LIFE) += amzn_sign_of_life.o
-obj-$(CONFIG_AMZN_SIGN_OF_LIFE_RTC) += amzn_sign_of_life_rtc_impl.o
 obj-$(CONFIG_AMZN_INPUT_KEYCOMBO)	+= amzn_keycombo.o
 obj-$(CONFIG_AMZN_IDME) 		+= amzn_idme.o
 obj-$(CONFIG_AMZN_DSP_FRAMEWORK)	+= dspframework/

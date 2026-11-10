@@ -8,16 +8,6 @@ config AMZN
 
 if AMZN
 
-config AMZN_SIGN_OF_LIFE
-	bool "Amazon Sign of Life"
-	help
-	enable the life cycle metrics to log device boot and shutdown information
-
-config AMZN_SIGN_OF_LIFE_RTC
-        bool "Amazon Sign of Life platform implementation"
-        help
-        enable the life cycle metrics to log device boot and shutdown information on specific Platform
-
 config AMZN_INPUT_KEYCOMBO
 	tristate "Amazon key combo"
 	depends on INPUT

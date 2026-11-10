@@ -30,9 +30,6 @@
 #include <linux/seq_file.h>
 #include <tscpu_settings.h>
 #include <linux/reboot.h>
-#ifdef CONFIG_AMZN_SIGN_OF_LIFE
-#include <linux/amzn_sign_of_life.h>
-#endif
 
 #include "thermal_core.h"
 
@@ -104,10 +101,6 @@ struct thermal_cooling_device *cdev, unsigned long state)
 			}
 
 		}
-
-#ifdef CONFIG_AMZN_SIGN_OF_LIFE
-		life_cycle_set_thermal_shutdown_reason(THERMAL_SHUTDOWN_REASON_SOC);
-#endif
 
 		/* To trigger data abort to reset the system
 		 * for thermal protection.
@@ -195,9 +188,6 @@ struct thermal_cooling_device *cdev, unsigned long state)
 					instance->tz->temperature, instance->trip, trip_temp);
 			}
 		}
-#ifdef CONFIG_AMZN_SIGN_OF_LIFE
-		life_cycle_set_thermal_shutdown_reason(THERMAL_SHUTDOWN_REASON_BTS);
-#endif
 		/* To trigger data abort to reset the system
 		 * for thermal protection.
 		 */
@@ -243,9 +233,6 @@ struct thermal_cooling_device *cdev, unsigned long state)
 			}
 		}
 
-#ifdef CONFIG_AMZN_SIGN_OF_LIFE
-		life_cycle_set_thermal_shutdown_reason(THERMAL_SHUTDOWN_REASON_BTS);
-#endif
 		/* To trigger data abort to reset the system
 		 * for thermal protection.
 		 */

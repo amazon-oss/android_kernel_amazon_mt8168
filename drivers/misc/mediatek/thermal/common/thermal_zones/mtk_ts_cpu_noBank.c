@@ -81,9 +81,6 @@
 #define CFG_LVTS_DOMINATOR	0
 #endif
 #include <linux/reboot.h>
-#ifdef CONFIG_AMZN_SIGN_OF_LIFE
-#include <linux/amzn_sign_of_life.h>
-#endif
 #include <linux/thermal_framework.h>
 
 /*=============================================================
@@ -558,14 +555,11 @@ static int tscpu_get_crit_temp
 static int tscpu_thermal_notify(struct thermal_zone_device *thermal,
 				int trip, enum thermal_trip_type type)
 {
-#ifdef CONFIG_AMZN_SIGN_OF_LIFE
 	if (type == THERMAL_TRIP_CRITICAL) {
 		pr_err("[%s][%s]type:[%s] Thermal shutdown CPU, current temp=%d, trip=%d, trip_temp=%d\n",
 			__func__, dev_name(&thermal->device), thermal->type,
 			thermal->temperature, trip, trip_temp[trip]);
-		life_cycle_set_thermal_shutdown_reason(THERMAL_SHUTDOWN_REASON_SOC);
 	}
-#endif
 
 	if (type == THERMAL_TRIP_CRITICAL)
 		set_shutdown_enable_dcap(&thermal->device);

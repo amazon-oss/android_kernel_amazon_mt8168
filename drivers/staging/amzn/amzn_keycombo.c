@@ -24,9 +24,6 @@
 #include <linux/of.h>
 #include <linux/reboot.h>
 #include <linux/amzn_keycombo.h>
-#ifdef CONFIG_AMZN_SIGN_OF_LIFE
-#include <include/amzn_sign_of_life.h>
-#endif
 
 BLOCKING_NOTIFIER_HEAD(keycombo_notifier_list);
 
@@ -119,12 +116,7 @@ static void do_power_off(void *data)
 
 	blocking_notifier_call_chain(&keycombo_notifier_list, COMBO_FUNC_POWER_OFF, NULL);
 
-#ifdef CONFIG_AMZN_SIGN_OF_LIFE
-	life_cycle_set_shutdown_reason(SHUTDOWN_BY_LONG_PWR_KEY_PRESS);
 	orderly_reboot();
-#else
-	orderly_poweroff(true);
-#endif
 }
 
 static struct function funcs[] = {

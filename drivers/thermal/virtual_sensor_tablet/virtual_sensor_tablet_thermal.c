@@ -30,10 +30,6 @@
 #include <linux/list_sort.h>
 #include <linux/thermal_framework.h>
 
-#ifdef CONFIG_AMZN_SIGN_OF_LIFE
-#include <linux/amzn_sign_of_life.h>
-#endif
-
 #include <thermal_core.h>
 
 #define DRIVER_NAME "virtual_sensor-thermal"
@@ -402,16 +398,12 @@ static int virtual_sensor_thermal_notify(struct thermal_zone_device *thermal,
 	snprintf(data, sizeof(data), "%s", "SHUTDOWN_WARNING");
 	kobject_uevent_env(&thermal->device.kobj, KOBJ_CHANGE, envp);
 
-#ifdef CONFIG_AMZN_SIGN_OF_LIFE
 	if (type == THERMAL_TRIP_CRITICAL) {
 		virtual_sensor_thermal_get_trip_temp(thermal, trip, &trip_temp);
 		pr_err("[%s][%s]type:[%s] Thermal shutdown virtual sensor, current temp=%d, trip=%d, trip_temp=%d\n",
 			__func__, dev_name(&thermal->device), thermal->type,
 			thermal->temperature, trip, trip_temp);
-		life_cycle_set_thermal_shutdown_reason
-			(THERMAL_SHUTDOWN_REASON_PCB);
 	}
-#endif
 
 	if (type == THERMAL_TRIP_CRITICAL)
 		set_shutdown_enable_dcap(&thermal->device);

@@ -32,9 +32,6 @@
 #include <linux/slab.h>
 #include <linux/reboot.h>
 
-#ifdef CONFIG_AMZN_SIGN_OF_LIFE
-#include <linux/amzn_sign_of_life.h>
-#endif
 #include <linux/thermal_framework.h>
 
 #include "thermal_core.h"
@@ -238,14 +235,11 @@ struct thermal_zone_device *thermal, int *temperature)
 static int mtktspmic_thermal_notify(struct thermal_zone_device *thermal,
 				int trip, enum thermal_trip_type type)
 {
-#ifdef CONFIG_AMZN_SIGN_OF_LIFE
 	if (type == THERMAL_TRIP_CRITICAL) {
 		pr_err("[%s][%s]type:[%s] Thermal shutdown PMIC, current temp=%d, trip=%d, trip_temp=%d\n",
 			__func__, dev_name(&thermal->device), thermal->type,
 			thermal->temperature, trip, trip_temp[trip]);
-		life_cycle_set_thermal_shutdown_reason(THERMAL_SHUTDOWN_REASON_PMIC);
 	}
-#endif
 
 	if (type == THERMAL_TRIP_CRITICAL)
 		set_shutdown_enable_dcap(&thermal->device);
@@ -301,9 +295,6 @@ struct thermal_cooling_device *cdev, unsigned long state)
 			}
 		}
 
-#ifdef CONFIG_AMZN_SIGN_OF_LIFE
-		life_cycle_set_thermal_shutdown_reason(THERMAL_SHUTDOWN_REASON_PMIC);
-#endif
 		/* To trigger data abort to reset the system
 		 * for thermal protection.
 		 */
