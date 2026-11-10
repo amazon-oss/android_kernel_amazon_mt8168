@@ -103,7 +103,7 @@ static int ltr559_local_init(void);
 static int ltr559_remove(void);
 static void get_ltr_dts_func(struct device_node *node);
 
-#ifdef CONFIG_IDME
+#ifdef CONFIG_AMZN_IDME
 extern unsigned int idme_get_alscal_value(void);
 extern unsigned int idme_get_tp_cg_color(void);
 static void get_als_cali(void);
@@ -1791,7 +1791,7 @@ static int ltr559_devinit(void)
 	ltr559_obj->lux_threshold = DEF_LUX_THRESHOLD;
 	ltr559_obj->als_cal_high = DEF_ALSCAL_HIGH;
 	ltr559_obj->als_cal_low = DEF_ALSCAL_LOW;
-#ifdef CONFIG_IDME
+#ifdef CONFIG_AMZN_IDME
 	get_als_cali();
 #endif
 	get_ltr_dts_func(client->dev.of_node);
@@ -2251,7 +2251,7 @@ REPORT:
 }
 #endif
 
-#ifdef CONFIG_IDME
+#ifdef CONFIG_AMZN_IDME
 /*
  * notice: The EVT and later device will calibrate with two point,400lux&20lux in factory.
  *         The new alscal saved format will be lux not transmitance,so we need transform lux
