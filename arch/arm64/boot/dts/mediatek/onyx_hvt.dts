@@ -20,6 +20,26 @@
   version = "hvt";
 };
 
+/ {
+	reserved-memory {
+		ram_console-reserved-memory {
+			reg = <0 0x54400000 0 0x22000>;
+		};
+
+		pstore-reserved-memory {
+			reg = <0 0x54422000 0 0xe0000>;
+		};
+
+		minirdump-reserved-memory {
+			reg = <0 0x54502000 0 0x10000>;
+		};
+
+		kedump_buffer-reserved-memory {
+			reg = <0 0x54520000 0 0x10000>;
+		};
+	};
+};
+
 ROOT_NODE {
 	extcon_usb: extcon_usb_typec {
 		compatible = "linux,extcon-usb-typec";
