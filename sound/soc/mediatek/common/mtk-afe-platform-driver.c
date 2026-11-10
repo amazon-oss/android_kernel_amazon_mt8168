@@ -21,6 +21,71 @@
 #include "mtk-afe-platform-driver.h"
 #include "mtk-base-afe.h"
 
+int mtk_afe_combine_sub_dai(struct mtk_base_afe *afe)
+{
+	struct mtk_base_afe_dai *dai;
+	size_t num_dai_drivers = 0, dai_idx = 0;
+
+	/* calcualte total dai driver size */
+	list_for_each_entry(dai, &afe->sub_dais, list) {
+		num_dai_drivers += dai->num_dai_drivers;
+	}
+
+	dev_info(afe->dev, "%s(), num of dai %zd\n", __func__, num_dai_drivers);
+
+	/* combine sub_dais */
+	afe->num_dai_drivers = num_dai_drivers;
+	afe->dai_drivers = devm_kcalloc(afe->dev,
+					num_dai_drivers,
+					sizeof(struct snd_soc_dai_driver),
+					GFP_KERNEL);
+	if (!afe->dai_drivers)
+		return -ENOMEM;
+
+	list_for_each_entry(dai, &afe->sub_dais, list) {
+		/* dai driver */
+		memcpy(&afe->dai_drivers[dai_idx],
+		       dai->dai_drivers,
+		       dai->num_dai_drivers *
+		       sizeof(struct snd_soc_dai_driver));
+		dai_idx += dai->num_dai_drivers;
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(mtk_afe_combine_sub_dai);
+
+int mtk_afe_add_sub_dai_control(struct snd_soc_platform *platform)
+{
+	struct mtk_base_afe *afe = snd_soc_platform_get_drvdata(platform);
+	struct mtk_base_afe_dai *dai;
+
+	list_for_each_entry(dai, &afe->sub_dais, list) {
+		if (dai->controls)
+			snd_soc_add_platform_controls(platform,
+						      dai->controls,
+						      dai->num_controls);
+
+		if (dai->dapm_widgets)
+			snd_soc_dapm_new_controls(&platform->component.dapm,
+						  dai->dapm_widgets,
+						  dai->num_dapm_widgets);
+	}
+	/* add routes after all widgets are added */
+	list_for_each_entry(dai, &afe->sub_dais, list) {
+		if (dai->dapm_routes)
+			snd_soc_dapm_add_routes(&platform->component.dapm,
+						dai->dapm_routes,
+						dai->num_dapm_routes);
+	}
+
+	snd_soc_dapm_new_widgets(platform->component.dapm.card);
+
+	return 0;
+
+}
+EXPORT_SYMBOL_GPL(mtk_afe_add_sub_dai_control);
+
 static snd_pcm_uframes_t mtk_afe_pcm_pointer
 			 (struct snd_pcm_substream *substream)
 {
@@ -55,12 +120,41 @@ POINTER_RETURN_FRAMES:
 	return bytes_to_frames(substream->runtime, pcm_ptr_bytes);
 }
 
-static const struct snd_pcm_ops mtk_afe_pcm_ops = {
+/* calculate the target DMA-buffer position to be written/read */
+static void *get_dma_ptr(struct snd_pcm_runtime *runtime,
+			   int channel, unsigned long hwoff)
+{
+	return runtime->dma_area + hwoff +
+		channel * (runtime->dma_bytes / runtime->channels);
+}
+
+static int mtk_pcm_copy_user(struct snd_pcm_substream *substream, int channel,
+				    unsigned long hwoff, void *buf,
+				    unsigned long bytes)
+{
+	bool is_playback = substream->stream == SNDRV_PCM_STREAM_PLAYBACK;
+	if (is_playback) {
+		if (copy_from_user_toio(get_dma_ptr(substream->runtime,
+					channel, hwoff),
+					(void __user *)buf, bytes))
+			return -EFAULT;
+	} else {
+		if (copy_to_user_fromio((void __user *)buf,
+					 get_dma_ptr(substream->runtime,
+					 channel, hwoff), bytes))
+			return -EFAULT;
+	}
+	return 0;
+}
+
+const struct snd_pcm_ops mtk_afe_pcm_ops = {
 	.ioctl = snd_pcm_lib_ioctl,
 	.pointer = mtk_afe_pcm_pointer,
+	.copy_user = mtk_pcm_copy_user,
 };
+EXPORT_SYMBOL_GPL(mtk_afe_pcm_ops);
 
-static int mtk_afe_pcm_new(struct snd_soc_pcm_runtime *rtd)
+int mtk_afe_pcm_new(struct snd_soc_pcm_runtime *rtd)
 {
 	size_t size;
 	struct snd_pcm *pcm = rtd->pcm;
@@ -71,11 +165,13 @@ static int mtk_afe_pcm_new(struct snd_soc_pcm_runtime *rtd)
 						     rtd->platform->dev,
 						     size, size);
 }
+EXPORT_SYMBOL_GPL(mtk_afe_pcm_new);
 
-static void mtk_afe_pcm_free(struct snd_pcm *pcm)
+void mtk_afe_pcm_free(struct snd_pcm *pcm)
 {
 	snd_pcm_lib_preallocate_free_for_all(pcm);
 }
+EXPORT_SYMBOL_GPL(mtk_afe_pcm_free);
 
 const struct snd_soc_platform_driver mtk_afe_pcm_platform = {
 	.ops = &mtk_afe_pcm_ops,

@@ -204,11 +204,15 @@ int mtk_afe_fe_trigger(struct snd_pcm_substream *substream, int cmd,
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_START:
 	case SNDRV_PCM_TRIGGER_RESUME:
-		if (memif->data->enable_shift >= 0)
+		if (memif->data->enable_shift >= 0) {
 			mtk_regmap_update_bits(afe->regmap,
 					       memif->data->enable_reg,
 					       1 << memif->data->enable_shift,
 					       1 << memif->data->enable_shift);
+			if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
+				udelay(50);
+			}
+		}
 
 		/* set irq counter */
 		mtk_regmap_update_bits(afe->regmap, irq_data->irq_cnt_reg,
