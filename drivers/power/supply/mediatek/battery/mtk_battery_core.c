@@ -2038,6 +2038,12 @@ void fg_custom_init_from_dts(struct platform_device *dev)
 #endif
 	gm.enable_zero_percent_shutdown =
 		of_property_read_bool(np, "enable_zero_percent_shutdown");
+
+	if (!of_property_read_u32(np, "ui_fast_tracking_en", &val)) {
+		fg_cust_data.ui_fast_tracking_en = (int)val;
+		bm_err("%s: %s fast-tracking\n", __func__,
+			(fg_cust_data.ui_fast_tracking_en == 1)?"Enable":"Disable");
+	}
 }
 #endif
 
