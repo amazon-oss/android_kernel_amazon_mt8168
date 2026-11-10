@@ -166,3 +166,11 @@ config MTK_ONLY_SINGLE_DISPLAY
       This config decide if both OVL0 and OVL0_2L used for primary display.
       OVL0_2L can be used for external path if it set to y.
       If you are not sure abort this, do not set it to y.
+
+config FREE_FB_BUFFER
+    bool "Free the LK framebuffer after boot"
+    depends on MTK_FB
+    default n
+    help
+      Map the framebuffer reserved by LK through the linear map and
+      release it later. Needs LK to reserve it without no-map.

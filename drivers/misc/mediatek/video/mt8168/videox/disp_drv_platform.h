@@ -96,6 +96,4 @@ enum DISP_SESSION_ENUM {
 
 /*#define EVB_BRINGUP_LVDS*/
 
-#define FREE_FB_BUFFER
-
 #endif				/* __DISP_DRV_PLATFORM_H__ */
