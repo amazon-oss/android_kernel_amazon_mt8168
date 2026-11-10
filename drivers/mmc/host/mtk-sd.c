@@ -50,10 +50,6 @@
 #include "../core/card.h"
 #endif
 
-#if defined(CONFIG_AMZN_METRICS_LOG) || defined(CONFIG_AMZN_MINERVA_METRICS_LOG)
-#include <linux/amzn_metricslog.h>
-#endif
-
 #include <asm-generic/div64.h>
 #define MAX_BD_NUM          1024
 
@@ -319,12 +315,6 @@
 #define MTK_MMC_AUTOSUSPEND_DELAY	50
 #define CMD_TIMEOUT         (HZ/10 * 5)	/* 100ms x5 */
 #define DAT_TIMEOUT         (HZ    * 5)	/* 1000ms x5 */
-#ifdef CONFIG_AMZN_METRICS_LOG
-#define SDCARD_HOST_NAME	"mmc1"
-#endif
-#if defined(CONFIG_AMZN_METRICS_LOG) || defined(CONFIG_AMZN_MINERVA_METRICS_LOG)
-#define METRICS_DELAY       HZ
-#endif
 
 #define PAD_DELAY_MAX	32 /* PAD delay cells */
 /*--------------------------------------------------------------------------*/
@@ -481,22 +471,6 @@ struct msdc_host {
 	u32 pc_count;	/* total power cycle count */
 	u32 pc_suspend;	/* suspend/resume count */
 	u32 cmd19_fail; /* cmd19 tune failed count */
-
-#if defined(CONFIG_AMZN_METRICS_LOG) || defined(CONFIG_AMZN_MINERVA_METRICS_LOG)
-	struct delayed_work metrics_work;
-	bool metrics_enable;
-	u32 crc_count_p;	/* reported crc count */
-	u32 crc_invalid_count_p;	/* reported crc invalid count eg CMD19 */
-	u32 req_count_p; /* reported request count */
-	u32 datatimeout_count_p; /* reported data timeout count */
-	u32 cmdtimeout_count_p; /* reported cmd timeout count */
-	u32 reqtimeout_count_p; /* reported req timeout count */
-	u32 pc_count_p;	/* reported power cycle count */
-	u32 pc_suspend_p;	/* reported suspend/resume count */
-	u32 cmd19_fail_p; /* reported cmd19 tune failed count */
-	u32 inserted_p; /* reported card detection count */
-	u32 inserted; /* total card detection could */
-#endif
 };
 
 #ifdef CONFIG_MMC_TUNE_WINDOW_LOGS
@@ -518,32 +492,6 @@ struct msdc_host {
 		(host)->tune_flag |= MMC_TUNE_FLAG_RSP_DAT; \
 	}                                               \
 } while (0)
-#endif
-
-#ifdef CONFIG_AMZN_METRICS_LOG
-#define MSDC_LOG_COUNTER_TO_VITALS(name, value) \
-	do { \
-		if (value != value##_p) { \
-			log_counter_to_vitals(ANDROID_LOG_INFO, "Kernel", "Kernel", \
-				((host->mmc) && (host->mmc->caps & MMC_CAP_SD_HIGHSPEED)) ? "SD" : "EMMC", \
-				#name, value - value##_p, "count", NULL, VITALS_NORMAL); \
-			value##_p = value; \
-		} \
-	} while (0)
-#endif
-
-#ifdef CONFIG_AMZN_MINERVA_METRICS_LOG
-#define MSDC_MINERVA_COUNTER_TO_VITALS(name, value) \
-	do { \
-		if (value != value##_p) { \
-			log_counter_to_vitals_v2(ANDROID_LOG_INFO, \
-				VITALS_EMMC_GROUP_ID, VITALS_EMMC_SCHEMA_ID, \
-				"Kernel", "msdc_state", \
-				((host->mmc) && (host->mmc->caps & MMC_CAP_SD_HIGHSPEED)) ? "SD" : "EMMC", \
-				#name, value - value##_p, "count", NULL, VITALS_NORMAL, NULL, NULL); \
-				value##_p = value; \
-		} \
-	} while (0)
 #endif
 
 #define FILTER_INVALIDCMD(opcode) \
@@ -619,40 +567,6 @@ static void msdc_remove_device_attrs(struct msdc_host *host, struct device_attri
 	for (i = 0; attrs[i]; ++i)
 		device_remove_file(host->dev, attrs[i]);
 }
-
-#if defined(CONFIG_AMZN_MINERVA_METRICS_LOG)
-static void msdc_metrics_work(struct work_struct *work)
-{
-	struct msdc_host *host = container_of(work, struct msdc_host, metrics_work.work);
-
-	MSDC_MINERVA_COUNTER_TO_VITALS(crc, host->crc_count);
-	MSDC_MINERVA_COUNTER_TO_VITALS(crc_invalid, host->crc_invalid_count);
-	MSDC_MINERVA_COUNTER_TO_VITALS(req, host->req_count);
-	MSDC_MINERVA_COUNTER_TO_VITALS(datato, host->datatimeout_count);
-	MSDC_MINERVA_COUNTER_TO_VITALS(cmdto, host->cmdtimeout_count);
-	MSDC_MINERVA_COUNTER_TO_VITALS(reqto, host->reqtimeout_count);
-	MSDC_MINERVA_COUNTER_TO_VITALS(pc_count, host->pc_count);
-	MSDC_MINERVA_COUNTER_TO_VITALS(pc_suspend, host->pc_suspend);
-	MSDC_MINERVA_COUNTER_TO_VITALS(cmd19_fail, host->cmd19_fail);
-	MSDC_MINERVA_COUNTER_TO_VITALS(inserted, host->inserted);
-}
-#elif defined(CONFIG_AMZN_METRICS_LOG)
-static void msdc_metrics_work(struct work_struct *work)
-{
-	struct msdc_host *host = container_of(work, struct msdc_host, metrics_work.work);
-
-	MSDC_LOG_COUNTER_TO_VITALS(crc, host->crc_count);
-	MSDC_LOG_COUNTER_TO_VITALS(crc_invalid, host->crc_invalid_count);
-	MSDC_LOG_COUNTER_TO_VITALS(req, host->req_count);
-	MSDC_LOG_COUNTER_TO_VITALS(datato, host->datatimeout_count);
-	MSDC_LOG_COUNTER_TO_VITALS(cmdto, host->cmdtimeout_count);
-	MSDC_LOG_COUNTER_TO_VITALS(reqto, host->reqtimeout_count);
-	MSDC_LOG_COUNTER_TO_VITALS(pc_count, host->pc_count);
-	MSDC_LOG_COUNTER_TO_VITALS(pc_suspend, host->pc_suspend);
-	MSDC_LOG_COUNTER_TO_VITALS(cmd19_fail, host->cmd19_fail);
-	MSDC_LOG_COUNTER_TO_VITALS(inserted, host->inserted);
-}
-#endif
 
 static const struct mtk_mmc_compatible mt8135_compat = {
 	.clk_div_bits = 8,
@@ -1224,10 +1138,6 @@ static void msdc_start_data(struct msdc_host *host, struct mmc_request *mrq,
 
 	mod_delayed_work(system_wq, &host->req_timeout, DAT_TIMEOUT);
 	host->req_count++;
-#ifdef CONFIG_AMZN_METRICS_LOG
-	if (!strcmp(mmc_hostname(host->mmc), SDCARD_HOST_NAME))
-		atomic64_inc(&host->mmc->data_count);
-#endif
 	dev_dbg(host->dev, "crc/total %d/%d invalcrc %d datato %d cmdto %d reqto %d total_pc %d pc_sus %d\n",
 			host->crc_count, host->req_count, host->crc_invalid_count, host->datatimeout_count,
 			host->cmdtimeout_count, host->reqtimeout_count, host->pc_count, host->pc_suspend);
@@ -1352,10 +1262,6 @@ static bool msdc_cmd_done(struct msdc_host *host, int events,
 			host->error |= REQ_CMD_TMO;
 			host->cmdtimeout_count++;
 		}
-#if defined(CONFIG_AMZN_METRICS_LOG) || defined(CONFIG_AMZN_MINERVA_METRICS_LOG)
-		if (host->metrics_enable)
-			mod_delayed_work(system_wq, &host->metrics_work, METRICS_DELAY);
-#endif
 	}
 	if (cmd->error &&
 	    cmd->opcode != MMC_SEND_TUNING_BLOCK &&
@@ -1556,10 +1462,6 @@ static bool msdc_data_xfer_done(struct msdc_host *host, u32 events,
 			if (events & MSDC_INT_DATTMO) {
 				data->error = -ETIMEDOUT;
 				host->datatimeout_count++;
-#ifdef CONFIG_AMZN_METRICS_LOG
-				if (!strcmp(mmc_hostname(host->mmc), SDCARD_HOST_NAME))
-					atomic64_inc(&host->mmc->data_timeout_count);
-#endif
 			} else if (events & MSDC_INT_DATCRCERR) {
 				data->error = -EILSEQ;
 				if (FILTER_INVALIDCMD(mrq->cmd->opcode))
@@ -1567,10 +1469,6 @@ static bool msdc_data_xfer_done(struct msdc_host *host, u32 events,
 				else
 					host->crc_count++;
 			}
-#if defined(CONFIG_AMZN_METRICS_LOG) || defined(CONFIG_AMZN_MINERVA_METRICS_LOG)
-			if (host->metrics_enable)
-				mod_delayed_work(system_wq, &host->metrics_work, METRICS_DELAY);
-#endif
 			if (data->error != -EILSEQ &&
 			    mrq->cmd->opcode != MMC_SEND_TUNING_BLOCK &&
 			    mrq->cmd->opcode != MMC_SEND_TUNING_BLOCK_HS200) {
@@ -1985,10 +1883,6 @@ static void msdc_ops_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 			regulator_disable(mmc->supply.vqmmc);
 			host->vqmmc_enabled = false;
 			host->pc_count++;
-#if defined(CONFIG_AMZN_METRICS_LOG) || defined(CONFIG_AMZN_MINERVA_METRICS_LOG)
-			if (host->metrics_enable)
-				mod_delayed_work(system_wq, &host->metrics_work, METRICS_DELAY);
-#endif
 			dev_info(host->dev, "crc/total %d/%d invalcrc %d datato %d cmdto %d reqto %d total_pc %d pc_sus %d\n",
 				host->crc_count, host->req_count, host->crc_invalid_count, host->datatimeout_count,
 				host->cmdtimeout_count, host->reqtimeout_count, host->pc_count, host->pc_suspend);
@@ -2525,10 +2419,6 @@ static int msdc_execute_tuning(struct mmc_host *mmc, u32 opcode)
 				dev_err(host->dev, "Tune data fail!\n");
 			if (ret) {
 				host->cmd19_fail++;
-#if defined(CONFIG_AMZN_METRICS_LOG) || defined(CONFIG_AMZN_MINERVA_METRICS_LOG)
-			if (host->metrics_enable)
-					mod_delayed_work(system_wq, &host->metrics_work, METRICS_DELAY);
-#endif
 			}
 		}
 	}
@@ -2577,17 +2467,6 @@ static void msdc_ack_sdio_irq(struct mmc_host *mmc)
 	msdc_enable_sdio_irq(mmc, 1);
 }
 
-#if defined(CONFIG_AMZN_METRICS_LOG) || defined(CONFIG_AMZN_MINERVA_METRICS_LOG)
-static void msdc_cd_irq(struct mmc_host *mmc)
-{
-	struct msdc_host *host = mmc_priv(mmc);
-
-	host->inserted++;
-	if (host->metrics_enable)
-		mod_delayed_work(system_wq, &host->metrics_work, METRICS_DELAY);
-}
-#endif
-
 static const struct mmc_host_ops mt_msdc_ops = {
 	.post_req = msdc_post_req,
 	.pre_req = msdc_pre_req,
@@ -2602,9 +2481,6 @@ static const struct mmc_host_ops mt_msdc_ops = {
 	.execute_tuning = msdc_execute_tuning,
 	.prepare_hs400_tuning = msdc_prepare_hs400_tuning,
 	.hw_reset = msdc_hw_reset,
-#if defined(CONFIG_AMZN_METRICS_LOG) || defined(CONFIG_AMZN_MINERVA_METRICS_LOG)
-	.cd_irq = msdc_cd_irq,
-#endif
 };
 
 static void msdc_of_property_parse(struct platform_device *pdev,
@@ -2827,10 +2703,6 @@ static int msdc_drv_probe(struct platform_device *pdev)
 	msdc_init_gpd_bd(host, &host->dma);
 	INIT_DELAYED_WORK(&host->req_timeout, msdc_request_timeout);
 	spin_lock_init(&host->lock);
-#if defined(CONFIG_AMZN_METRICS_LOG) || defined(CONFIG_AMZN_MINERVA_METRICS_LOG)
-	host->metrics_enable = true;
-	INIT_DELAYED_WORK(&host->metrics_work, msdc_metrics_work);
-#endif
 
 	platform_set_drvdata(pdev, mmc);
 	msdc_ungate_clock(host);

@@ -34,12 +34,6 @@
 #include <mt-plat/mtk_boot_common.h>
 #endif
 
-#ifdef CONFIG_AMAZON_METRICS_LOG
-#include <linux/metricslog.h>
-#define LMK_METRIC_TAG "kernel"
-#define METRICS_data_LEN 128
-#endif /* CONFIG_AMAZON_METRICS_LOG */
-
 #define DEFAULT_CMD6_TIMEOUT_MS	500
 #define MIN_CACHE_EN_TIMEOUT_MS 1600
 
@@ -1631,46 +1625,6 @@ static int mmc_hs200_tuning(struct mmc_card *card)
 	return mmc_execute_tuning(card);
 }
 
-#ifdef CONFIG_AMAZON_METRICS_LOG
-static int emmcmetrics_read(struct mmc_host *host)
-{
-	char logcat_emmc_data[METRICS_data_LEN];
-	struct mmc_card *card = host->card;
-
-	snprintf(logcat_emmc_data, METRICS_data_LEN,
-					"emmc:def:life_a=%d;CT;1,life_b=%d;CT;1:NR",
-					card->ext_csd.device_life_time_est_typ_a,
-					card->ext_csd.device_life_time_est_typ_b);
-	log_to_metrics(ANDROID_LOG_INFO, LMK_METRIC_TAG,
-						logcat_emmc_data);
-	log_counter_to_vitals(ANDROID_LOG_INFO, "Kernel", "Kernel",
-					"EMMC", "life_a", (u32)card->ext_csd.device_life_time_est_typ_a,
-					"count", NULL, VITALS_NORMAL);
-	log_counter_to_vitals(ANDROID_LOG_INFO, "Kernel", "Kernel",
-					 "EMMC", "life_b", (u32)card->ext_csd.device_life_time_est_typ_b,
-					 "count", NULL, VITALS_NORMAL);
-
-	return 0;
-}
-
-/*
- * Internal work. Work to output metrics at some later point.
- */
-void mmc_host_metrics_work(struct work_struct *work)
-{
-	struct mmc_host *host = container_of(work, struct mmc_host,
-						metrics_delay_work.work);
-	emmcmetrics_read(host);
-}
-
-static void metrics_delaywork_queue(struct mmc_host *host)
-{
-	/* delay 5 seconds to output metrics */
-	queue_delayed_work(system_wq, &host->metrics_delay_work,
-				msecs_to_jiffies(5000));
-}
-#endif /* CONFIG_AMAZON_METRICS_LOG */
-
 /*
  * Handle the detection and initialisation of a card.
  *
@@ -2556,10 +2510,6 @@ int mmc_attach_mmc(struct mmc_host *host)
 	err = mmc_init_card(host, rocr, NULL);
 	if (err)
 		goto err;
-
-#ifdef CONFIG_AMAZON_METRICS_LOG
-	metrics_delaywork_queue(host);
-#endif /* CONFIG_AMAZON_METRICS_LOG */
 
 	mmc_release_host(host);
 
