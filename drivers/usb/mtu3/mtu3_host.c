@@ -41,7 +41,7 @@
  */
 static void ssusb_wakeup_ip_sleep_en(struct ssusb_mtk *ssusb)
 {
-	u32 tmp;
+	u32 tmp = 0;
 	struct regmap *pericfg = ssusb->pericfg;
 
 	regmap_read(pericfg, PERI_WK_CTRL1, &tmp);
@@ -58,7 +58,7 @@ static void ssusb_wakeup_ip_sleep_en(struct ssusb_mtk *ssusb)
 
 static void ssusb_wakeup_ip_sleep_dis(struct ssusb_mtk *ssusb)
 {
-	u32 tmp;
+	u32 tmp = 0;
 
 	regmap_read(ssusb->pericfg, PERI_WK_CTRL1, &tmp);
 	tmp &= ~UWK_CTL1_IS_E;
@@ -232,7 +232,8 @@ static void ssusb_host_setup(struct ssusb_mtk *ssusb)
 	ssusb_host_enable(ssusb);
 
 	/* if port0 supports dual-role, works as host mode by default */
-	ssusb_set_vbus(&ssusb->otg_switch, 1);
+	if (ssusb->dr_mode == USB_DR_MODE_HOST)
+		ssusb_set_vbus(&ssusb->otg_switch, 1);
 }
 
 static void ssusb_host_cleanup(struct ssusb_mtk *ssusb)

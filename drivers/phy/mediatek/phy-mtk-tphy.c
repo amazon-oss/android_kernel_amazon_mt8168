@@ -49,6 +49,12 @@
 #define PA0_RG_U2PLL_FORCE_ON		BIT(15)
 #define PA0_RG_USB20_INTR_EN		BIT(5)
 
+#define U3P_USBPHYACR1		0x004
+#define PA1_RG_VRT_SEL			GENMASK(14, 12)
+#define PA1_RG_VRT_SEL_VAL(x)	((0x7 & (x)) << 12)
+#define PA1_RG_TERM_SEL		GENMASK(10, 8)
+#define PA1_RG_TERM_SEL_VAL(x)	((0x7 & (x)) << 8)
+
 #define U3P_USBPHYACR2		0x008
 #define PA2_RG_SIF_U2PLL_FORCE_EN	BIT(18)
 
@@ -98,7 +104,14 @@
 #define P2C_RG_UART_EN			BIT(16)
 #define P2C_RG_VBUSVALID		BIT(5)
 #define P2C_RG_SESSEND			BIT(4)
+#define P2C_RG_BVALID			BIT(3)
 #define P2C_RG_AVALID			BIT(2)
+#define P2C_RG_IDDIG			BIT(1)
+#define P2C_RG_FORCE_VBUSVALID		BIT(13)
+#define P2C_RG_FORCE_SESSEND		BIT(12)
+#define P2C_RG_FORCE_BVALID		BIT(11)
+#define P2C_RG_FORCE_AVALID		BIT(10)
+#define P2C_RG_FORCE_IDDIG		BIT(9)
 
 #define U3P_U3_CHIP_GPIO_CTLD		0x0c
 #define P3C_REG_IP_SW_RST		BIT(31)
@@ -293,6 +306,9 @@ struct mtk_phy_instance {
 	struct clk *ref_clk;	/* reference clock of anolog phy */
 	u32 index;
 	u8 type;
+	int eye_src;
+	int eye_vrt;
+	int eye_term;
 };
 
 struct mtk_tphy {
@@ -305,6 +321,7 @@ struct mtk_tphy {
 	int nphys;
 };
 
+
 static void hs_slew_rate_calibrate(struct mtk_tphy *tphy,
 	struct mtk_phy_instance *instance)
 {
@@ -314,6 +331,10 @@ static void hs_slew_rate_calibrate(struct mtk_tphy *tphy,
 	int calibration_val;
 	int fm_out;
 	u32 tmp;
+
+	/* use force value */
+	if (instance->eye_src)
+		return;
 
 	/* enable USB ring oscillator */
 	tmp = readl(com + U3P_USBPHYACR5);
@@ -505,6 +526,7 @@ static void u2_phy_instance_power_on(struct mtk_tphy *tphy,
 	writel(tmp, com + U3P_U2PHYDTM0);
 
 	/* OTG Enable */
+	#ifndef U2PHY_FORCE_DEVICE_MODE
 	tmp = readl(com + U3P_USBPHYACR6);
 	tmp |= PA6_RG_U2_OTG_VBUSCMP_EN;
 	writel(tmp, com + U3P_USBPHYACR6);
@@ -513,6 +535,18 @@ static void u2_phy_instance_power_on(struct mtk_tphy *tphy,
 	tmp |= P2C_RG_VBUSVALID | P2C_RG_AVALID;
 	tmp &= ~P2C_RG_SESSEND;
 	writel(tmp, com + U3P_U2PHYDTM1);
+	#else
+	tmp = readl(com + U3P_USBPHYACR6);
+	tmp &= ~PA6_RG_U2_OTG_VBUSCMP_EN;
+	writel(tmp, com + U3P_USBPHYACR6);
+
+	tmp = readl(com + U3P_U2PHYDTM1);
+	tmp |= P2C_RG_VBUSVALID | P2C_RG_BVALID | P2C_RG_AVALID | P2C_RG_IDDIG;
+	tmp |= P2C_RG_FORCE_VBUSVALID | P2C_RG_FORCE_BVALID;
+	tmp |= P2C_RG_FORCE_AVALID | P2C_RG_FORCE_IDDIG | P2C_RG_FORCE_SESSEND;
+	tmp &= ~P2C_RG_SESSEND;
+	writel(tmp, com + U3P_U2PHYDTM1);
+	#endif
 
 	if (tphy->pdata->avoid_rx_sen_degradation && index) {
 		tmp = readl(com + U3D_U2PHYDCR0);
@@ -771,6 +805,7 @@ static void phy_v1_banks_init(struct mtk_tphy *tphy,
 	}
 }
 
+static struct mtk_phy_instance *bc11_instance;
 static void phy_v2_banks_init(struct mtk_tphy *tphy,
 			      struct mtk_phy_instance *instance)
 {
@@ -794,6 +829,55 @@ static void phy_v2_banks_init(struct mtk_tphy *tphy,
 		dev_err(tphy->dev, "incompatible PHY type\n");
 		return;
 	}
+
+	if ((tphy->phys[0] == instance) && (instance->type == PHY_TYPE_USB2))
+		bc11_instance = instance;
+}
+
+static void phy_parse_property(struct mtk_tphy *tphy,
+				struct mtk_phy_instance *instance)
+{
+	struct device *dev = &instance->phy->dev;
+
+	if (instance->type != PHY_TYPE_USB2)
+		return;
+
+	device_property_read_u32(dev, "mediatek,eye-src",
+				 &instance->eye_src);
+	device_property_read_u32(dev, "mediatek,eye-vrt",
+				 &instance->eye_vrt);
+	device_property_read_u32(dev, "mediatek,eye-term",
+				 &instance->eye_term);
+}
+
+static void u2_phy_props_set(struct mtk_tphy *tphy,
+			     struct mtk_phy_instance *instance)
+{
+	struct u2phy_banks *u2_banks = &instance->u2_banks;
+	void __iomem *com = u2_banks->com;
+	u32 tmp;
+
+
+	if (instance->eye_src) {
+		tmp = readl(com + U3P_USBPHYACR5);
+		tmp &= ~PA5_RG_U2_HSTX_SRCTRL;
+		tmp |= PA5_RG_U2_HSTX_SRCTRL_VAL(instance->eye_src);
+		writel(tmp, com + U3P_USBPHYACR5);
+	}
+
+	if (instance->eye_vrt) {
+		tmp = readl(com + U3P_USBPHYACR1);
+		tmp &= ~PA1_RG_VRT_SEL;
+		tmp |= PA1_RG_VRT_SEL_VAL(instance->eye_vrt);
+		writel(tmp, com + U3P_USBPHYACR1);
+	}
+
+	if (instance->eye_term) {
+		tmp = readl(com + U3P_USBPHYACR1);
+		tmp &= ~PA1_RG_TERM_SEL;
+		tmp |= PA1_RG_TERM_SEL_VAL(instance->eye_term);
+		writel(tmp, com + U3P_USBPHYACR1);
+	}
 }
 
 static int mtk_phy_init(struct phy *phy)
@@ -811,12 +895,13 @@ static int mtk_phy_init(struct phy *phy)
 	ret = clk_prepare_enable(instance->ref_clk);
 	if (ret) {
 		dev_err(tphy->dev, "failed to enable ref_clk\n");
-		return ret;
+		goto fail1;
 	}
 
 	switch (instance->type) {
 	case PHY_TYPE_USB2:
 		u2_phy_instance_init(tphy, instance);
+		u2_phy_props_set(tphy, instance);
 		break;
 	case PHY_TYPE_USB3:
 		u3_phy_instance_init(tphy, instance);
@@ -829,16 +914,38 @@ static int mtk_phy_init(struct phy *phy)
 		break;
 	default:
 		dev_err(tphy->dev, "incompatible PHY type\n");
-		return -EINVAL;
+		goto fail2;
 	}
 
+	clk_disable_unprepare(instance->ref_clk);
+	clk_disable_unprepare(tphy->u3phya_ref);
+
 	return 0;
+
+fail2:
+	clk_disable_unprepare(instance->ref_clk);
+fail1:
+	clk_disable_unprepare(tphy->u3phya_ref);
+	return -EINVAL;
 }
 
 static int mtk_phy_power_on(struct phy *phy)
 {
 	struct mtk_phy_instance *instance = phy_get_drvdata(phy);
 	struct mtk_tphy *tphy = dev_get_drvdata(phy->dev.parent);
+	int ret;
+
+	ret = clk_prepare_enable(tphy->u3phya_ref);
+	if (ret) {
+		dev_err(tphy->dev, "failed to enable u3phya_ref\n");
+		return ret;
+	}
+
+	ret = clk_prepare_enable(instance->ref_clk);
+	if (ret) {
+		dev_err(tphy->dev, "failed to enable ref_clk\n");
+		goto fail;
+	}
 
 	if (instance->type == PHY_TYPE_USB2) {
 		u2_phy_instance_power_on(tphy, instance);
@@ -848,6 +955,10 @@ static int mtk_phy_power_on(struct phy *phy)
 	}
 
 	return 0;
+
+fail:
+	clk_disable_unprepare(tphy->u3phya_ref);
+	return ret;
 }
 
 static int mtk_phy_power_off(struct phy *phy)
@@ -860,6 +971,9 @@ static int mtk_phy_power_off(struct phy *phy)
 	else if (instance->type == PHY_TYPE_PCIE)
 		pcie_phy_instance_power_off(tphy, instance);
 
+	clk_disable_unprepare(instance->ref_clk);
+	clk_disable_unprepare(tphy->u3phya_ref);
+
 	return 0;
 }
 
@@ -867,13 +981,31 @@ static int mtk_phy_exit(struct phy *phy)
 {
 	struct mtk_phy_instance *instance = phy_get_drvdata(phy);
 	struct mtk_tphy *tphy = dev_get_drvdata(phy->dev.parent);
+	int ret;
+
+	ret = clk_prepare_enable(tphy->u3phya_ref);
+	if (ret) {
+		dev_err(tphy->dev, "failed to enable u3phya_ref\n");
+		return ret;
+	}
+
+	ret = clk_prepare_enable(instance->ref_clk);
+	if (ret) {
+		dev_err(tphy->dev, "failed to enable ref_clk\n");
+		goto fail;
+	}
 
 	if (instance->type == PHY_TYPE_USB2)
 		u2_phy_instance_exit(tphy, instance);
 
 	clk_disable_unprepare(instance->ref_clk);
 	clk_disable_unprepare(tphy->u3phya_ref);
+
 	return 0;
+
+fail:
+	clk_disable_unprepare(tphy->u3phya_ref);
+	return ret;
 }
 
 static struct phy *mtk_phy_xlate(struct device *dev,
@@ -917,6 +1049,8 @@ static struct phy *mtk_phy_xlate(struct device *dev,
 		dev_err(dev, "phy version is not supported\n");
 		return ERR_PTR(-EINVAL);
 	}
+
+	phy_parse_property(tphy, instance);
 
 	return instance->phy;
 }
@@ -1042,10 +1176,6 @@ static int mtk_tphy_probe(struct platform_device *pdev)
 		phy_set_drvdata(phy, instance);
 		port++;
 
-		/* if deprecated clock is provided, ignore instance's one */
-		if (tphy->u3phya_ref)
-			continue;
-
 		instance->ref_clk = devm_clk_get(&phy->dev, "ref");
 		if (IS_ERR(instance->ref_clk)) {
 			dev_err(dev, "failed to get ref_clk(id-%d)\n", port);
@@ -1055,6 +1185,7 @@ static int mtk_tphy_probe(struct platform_device *pdev)
 	}
 
 	provider = devm_of_phy_provider_register(dev, mtk_phy_xlate);
+
 
 	return PTR_ERR_OR_ZERO(provider);
 put_child:
@@ -1071,6 +1202,40 @@ static struct platform_driver mtk_tphy_driver = {
 };
 
 module_platform_driver(mtk_tphy_driver);
+
+void Charger_Detect_Init(void)
+{
+	struct u2phy_banks *u2_banks;
+	void __iomem *com;
+	u32 tmp;
+
+	if (!bc11_instance)
+		return;
+
+	u2_banks = &bc11_instance->u2_banks;
+	com = u2_banks->com;
+	tmp = readl(com + U3P_USBPHYACR6);
+	tmp |= PA6_RG_U2_BC11_SW_EN;   /* DP/DM BC1.1 path Disable */
+	writel(tmp, com + U3P_USBPHYACR6);
+}
+EXPORT_SYMBOL_GPL(Charger_Detect_Init);
+
+void Charger_Detect_Release(void)
+{
+	struct u2phy_banks *u2_banks;
+	void __iomem *com;
+	u32 tmp;
+
+	if (!bc11_instance)
+		return;
+
+	u2_banks = &bc11_instance->u2_banks;
+	com = u2_banks->com;
+	tmp = readl(com + U3P_USBPHYACR6);
+	tmp &= ~PA6_RG_U2_BC11_SW_EN;   /* DP/DM BC1.1 path Disable */
+	writel(tmp, com + U3P_USBPHYACR6);
+}
+EXPORT_SYMBOL_GPL(Charger_Detect_Release);
 
 MODULE_AUTHOR("Chunfeng Yun <chunfeng.yun@mediatek.com>");
 MODULE_DESCRIPTION("MediaTek T-PHY driver");

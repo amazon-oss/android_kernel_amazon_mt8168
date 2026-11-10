@@ -22,6 +22,10 @@
 
 #include "power.h"
 
+#ifdef CONFIG_PROC_FS
+#include <linux/proc_fs.h>
+#endif
+
 #ifndef CONFIG_SUSPEND
 suspend_state_t pm_suspend_target_state;
 #define pm_suspend_target_state	(PM_SUSPEND_ON)
@@ -1167,6 +1171,15 @@ static const struct file_operations wakeup_sources_stats_fops = {
 
 static int __init wakeup_sources_debugfs_init(void)
 {
+#ifdef CONFIG_PROC_FS
+	struct proc_dir_entry *entry;
+
+	entry = proc_create("wakeup_sources", 0444,
+				NULL, &wakeup_sources_stats_fops);
+	if (!entry)
+		pr_err("create proc/wakeup_sources failed!\n");
+#endif
+
 	wakeup_sources_stats_dentry = debugfs_create_file("wakeup_sources",
 			S_IRUGO, NULL, NULL, &wakeup_sources_stats_fops);
 	return 0;

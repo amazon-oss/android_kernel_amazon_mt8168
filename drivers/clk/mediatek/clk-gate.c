@@ -26,7 +26,7 @@
 static int mtk_cg_bit_is_cleared(struct clk_hw *hw)
 {
 	struct mtk_clk_gate *cg = to_mtk_clk_gate(hw);
-	u32 val;
+	u32 val = 0;
 
 	regmap_read(cg->regmap, cg->sta_ofs, &val);
 
@@ -38,7 +38,7 @@ static int mtk_cg_bit_is_cleared(struct clk_hw *hw)
 static int mtk_cg_bit_is_set(struct clk_hw *hw)
 {
 	struct mtk_clk_gate *cg = to_mtk_clk_gate(hw);
-	u32 val;
+	u32 val = 0;
 
 	regmap_read(cg->regmap, cg->sta_ofs, &val);
 
@@ -51,6 +51,8 @@ static void mtk_cg_set_bit(struct clk_hw *hw)
 {
 	struct mtk_clk_gate *cg = to_mtk_clk_gate(hw);
 
+	if (!strncmp(clk_hw_get_name(hw), "mm_smi_common", 13))
+		pr_err("mm_smi_common off by ccf\n");
 	regmap_write(cg->regmap, cg->set_ofs, BIT(cg->bit));
 }
 
@@ -157,7 +159,8 @@ struct clk *mtk_clk_register_gate(
 		int clr_ofs,
 		int sta_ofs,
 		u8 bit,
-		const struct clk_ops *ops)
+		const struct clk_ops *ops,
+		unsigned int flags)
 {
 	struct mtk_clk_gate *cg;
 	struct clk *clk;
@@ -168,7 +171,7 @@ struct clk *mtk_clk_register_gate(
 		return ERR_PTR(-ENOMEM);
 
 	init.name = name;
-	init.flags = CLK_SET_RATE_PARENT;
+	init.flags = flags | CLK_SET_RATE_PARENT;
 	init.parent_names = parent_name ? &parent_name : NULL;
 	init.num_parents = parent_name ? 1 : 0;
 	init.ops = ops;

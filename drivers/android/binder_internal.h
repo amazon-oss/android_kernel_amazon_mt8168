@@ -13,6 +13,8 @@
 #include <linux/types.h>
 #include <linux/uidgid.h>
 
+#define MAX_SERVICE_NAME_LEN    32
+
 struct binder_context {
 	struct binder_node *binder_context_mgr_node;
 	struct mutex context_mgr_node_lock;
@@ -133,12 +135,29 @@ struct binder_transaction_log_entry {
 	uint32_t return_error;
 	uint32_t return_error_param;
 	const char *context_name;
+#ifdef BINDER_WATCHDOG
+	unsigned int code;
+	char service[MAX_SERVICE_NAME_LEN];
+	int fd;
+	struct timespec readstamp;
+	struct timespec endstamp;
+	unsigned int cur;
+#endif
+#ifdef BINDER_USER_TRACKING
+	struct timespec timestamp;
+	struct timeval tv;
+#endif
 };
 
 struct binder_transaction_log {
 	atomic_t cur;
 	bool full;
+#ifdef BINDER_WATCHDOG
+	unsigned int size;
+	struct binder_transaction_log_entry *entry;
+#else
 	struct binder_transaction_log_entry entry[32];
+#endif
 };
 
 extern struct binder_transaction_log binder_transaction_log;
