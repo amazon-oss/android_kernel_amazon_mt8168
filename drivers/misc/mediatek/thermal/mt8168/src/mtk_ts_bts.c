@@ -108,6 +108,22 @@ do {                                    \
 #define mtkts_bts_printk(fmt, args...) \
 pr_debug("[Thermal/TZ/BTS]" fmt, ##args)
 
+#define WIRELESS_CHG "wireless_chg"
+#define WIRELESS_CHG_CHANNEL_NAME "mtkts_bts3"
+
+static bool mtkts_bts_skip_zone(int index)
+{
+#if IS_ENABLED(CONFIG_WPC_IDTP922X)
+	if (!strcmp(bts_channel_param[index].channelName,
+		    WIRELESS_CHG_CHANNEL_NAME) &&
+	    get_charger_by_name(WIRELESS_CHG) == NULL) {
+		mtkts_bts_dprintk("[%s] no wireless charging ntc\n", __func__);
+		return true;
+	}
+#endif
+	return false;
+}
+
 struct gadc_thermal_info {
 	struct device *dev;
 	struct iio_channel *channel;
@@ -915,7 +931,8 @@ struct file *file, const char __user *buffer, size_t count, loff_t *data)	\
 \
 		mtkts_bts_dprintk("[mtkts_bts_write_"__stringify(num)	\
 					"] thermal register\n");	\
-		if (g_tsData[num].thz_dev == NULL) {	\
+		if (g_tsData[num].thz_dev == NULL &&	\
+		    !mtkts_bts_skip_zone(num)) {	\
 			g_tsData[num].thz_dev =	\
 				mtk_thermal_zone_device_register(	\
 					bts_channel_param[num].channelName, g_tsData[num].num_trip, NULL,	\
