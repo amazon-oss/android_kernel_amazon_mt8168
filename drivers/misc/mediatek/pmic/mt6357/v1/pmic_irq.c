@@ -63,13 +63,6 @@
 #include <mt-plat/mtk_ccci_common.h>
 #include <mt-plat/mtk_rtc.h>
 
-#if defined(CONFIG_AMZN_METRICS_LOG) || defined(CONFIG_AMZN_MINERVA_METRICS_LOG)
-#include <linux/amzn_metricslog.h>
-static struct work_struct metrics_work;
-static bool pwrkey_press;
-static void pwrkey_log_to_metrics(struct work_struct *data);
-#endif
-
 /*---IPI Mailbox define---*/
 /*#define IPIMB*/
 
@@ -330,37 +323,6 @@ static struct usb_extcon_info *extcon_info;
 struct delayed_work extcon_work;
 #endif
 
-#if defined(CONFIG_AMZN_MINERVA_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG)
-#define PWRKEY_METRICS_STR_LEN 512
-static void pwrkey_log_to_metrics(struct work_struct *data)
-{
-	char *action;
-	char buf[PWRKEY_METRICS_STR_LEN];
-
-#if defined(CONFIG_AMZN_METRICS_LOG)
-	int ret;
-
-	action = (pwrkey_press) ? "press" : "release";
-	ret = snprintf(buf, PWRKEY_METRICS_STR_LEN,
-		"%s:powi%c:report_action_is_%s=1;CT;1:NR", __func__,
-		action[0], action);
-	if (ret < 0)
-		pr_notice("[%s] snprintf fail %d\n", ret);
-
-	log_to_metrics(ANDROID_LOG_INFO, "PowerKeyEvent", buf);
-#endif
-
-#ifdef CONFIG_AMZN_MINERVA_METRICS_LOG
-	action = (pwrkey_press) ? "press" : "release";
-
-	minerva_metrics_log(buf, PWRKEY_METRICS_STR_LEN,
-		"%s:%s:100:%s,%s,report_action_is_action=%s;SY:us-east-1",
-		METRICS_PWRKEY_GROUP_ID, METRICS_PWRKEY_SCHEMA_ID,
-		PREDEFINED_DEVICE_ID_KEY, PREDEFINED_ESSENTIAL_KEY, action);
-#endif
-}
-#endif
-
 #if IRQ_HANDLER_READY
 /* PWRKEY Int Handler */
 void pwrkey_int_handler(void)
@@ -377,11 +339,6 @@ void pwrkey_int_handler(void)
 #if !defined(CONFIG_FPGA_EARLY_PORTING) && defined(CONFIG_KPD_PWRKEY_USE_PMIC)
 	kpd_pwrkey_pmic_handler(0x1);
 #endif
-
-#if defined(CONFIG_AMZN_MINERVA_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG)
-	pwrkey_press = true;
-	schedule_work(&metrics_work);
-#endif
 }
 
 void pwrkey_int_handler_r(void)
@@ -396,11 +353,6 @@ void pwrkey_int_handler_r(void)
 
 #if !defined(CONFIG_FPGA_EARLY_PORTING) && defined(CONFIG_KPD_PWRKEY_USE_PMIC)
 	kpd_pwrkey_pmic_handler(0x0);
-#endif
-
-#if defined(CONFIG_AMZN_MINERVA_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG)
-	pwrkey_press = false;
-	schedule_work(&metrics_work);
 #endif
 }
 
@@ -1079,10 +1031,6 @@ void PMIC_EINT_SETTING(struct platform_device *pdev)
 #if defined(CONFIG_MTK_KERNEL_POWER_OFF_CHARGING)
 	hrtimer_init(&kpoc_reboot_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 	kpoc_reboot_timer.function = kpoc_reboot_timer_func;
-#endif
-
-#if defined(CONFIG_AMZN_MINERVA_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG)
-	INIT_WORK(&metrics_work, pwrkey_log_to_metrics);
 #endif
 
 	IRQLOG("[CUST_EINT] CUST_EINT_MT_PMIC_MT6357_NUM=%d\n"
