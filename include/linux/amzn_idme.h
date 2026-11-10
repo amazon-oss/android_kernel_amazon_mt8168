@@ -25,6 +25,7 @@ unsigned int idme_get_battery_info(int index, size_t length);
 unsigned int idme_get_board_type(void);
 unsigned int idme_get_board_rev(void);
 unsigned int idme_get_bootmode(void);
+unsigned int idme_get_tp_cg_color(void);
 u64 idme_get_dev_flags_value(void);
 const char *idme_get_item(char *idme_item);
 bool board_has_wan(void);

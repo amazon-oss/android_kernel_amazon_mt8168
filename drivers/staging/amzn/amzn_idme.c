@@ -240,6 +240,34 @@ unsigned int idme_get_bootmode(void)
 }
 EXPORT_SYMBOL(idme_get_bootmode);
 
+unsigned int idme_get_tp_cg_color(void)
+{
+	struct device_node *ap = NULL;
+	char tp_cg_type[8] = { 0 };
+	const char *tp_cg = NULL;
+	unsigned int rs = 0;
+
+	ap = of_find_node_by_path(IDME_OF_TPCGCOLOR);
+	if (ap) {
+		tp_cg = (const char *)of_get_property(ap, "value", NULL);
+	} else {
+		pr_err("of_find_node_by_path failed,set default value 0\n");
+		return 0;
+	}
+
+	if ((int)strlen(tp_cg) == 0) {
+		pr_info("tp_cg_color len = 0,set default value 0\n");
+		return 0;
+	}
+	strlcpy(tp_cg_type, tp_cg, sizeof(tp_cg_type));
+	if (unlikely(kstrtouint(tp_cg_type, 16, &rs)))
+		pr_err("%s kstrtouint failed!\v", __func__);
+
+	pr_info("tp_cg_value=%d\n", rs);
+	return rs;
+}
+EXPORT_SYMBOL(idme_get_tp_cg_color);
+
 unsigned int idme_get_alscal_value(void)
 {
 	struct device_node *ap = NULL;
